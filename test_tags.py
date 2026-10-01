@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from tags import Config, build_tags, has_been_tagged, is_taggable, load_config
+from tags import Config, build_tags, has_been_tagged, is_taggable, load_config, tag_changes
 
 NAMES = ["general", "sensitive", "1girl", "long_hair", "smile", "hatsune_miku", "kagamine_rin",
          "megurine_luka", "kaito"]
@@ -80,6 +80,17 @@ class HelpersTest(unittest.TestCase):
         self.assertTrue(has_been_tagged(["mine", "wd:1girl"]))
         self.assertFalse(has_been_tagged(["rating:general"]))
         self.assertFalse(has_been_tagged(None))
+
+    def test_tag_changes_touch_only_what_differs(self):
+        add, remove = tag_changes(
+            ["mine", "wd:1girl", "rating:general", "chara:a"],
+            ["wd:1girl smile", "rating:general"])
+        self.assertEqual(add, ["wd:1girl smile"])
+        self.assertEqual(remove, ["wd:1girl", "chara:a"])
+
+    def test_tag_changes_on_an_untagged_item_only_add(self):
+        self.assertEqual(tag_changes(None, ["wd:x"]), (["wd:x"], []))
+        self.assertEqual(tag_changes(["wd:x"], ["wd:x"]), ([], []))
 
     def test_config_overrides_known_keys_only(self):
         with tempfile.TemporaryDirectory() as d:

@@ -12,15 +12,20 @@ WD14 系のタグ付けモデル（ONNX）で MEGA 上の画像・動画を推�
 
 ### コマンドと対象
 
-- コンテキストメニューに 2 コマンド（表示は英語）
-  - ファイルを右クリック: **Tag this item**
-  - フォルダを右クリック: **Tag everything in this folder**（配下を再帰的に）
+- コンテキストメニュー（WD Tagger のサブメニュー）に 4 コマンド（表示は英語）
+  - ファイルを右クリック: **Tag** / **Retag**
+  - フォルダを右クリック: **Tag all in folder** / **Retag all in folder**（配下を再帰的に）
+  - Tag は `wd:` タグがあるアイテムを飛ばす。Retag は全件を推論し直し、プラグインのタグ（`wd:` / `rating:` /
+    `chara:`）を新しい結果に置き換える。送るのは変わったタグだけ（消すのは古いタグにしかないもの、
+    付けるのは新しいタグにしかないもの）で、結果が同じなら通信しない（`unchanged` として数える）
+  - Retag の確認ダイアログはない（`ui.confirm` が未実装）。途中でキャンセルすれば、未処理のアイテムは
+    元のまま。処理中の 1 件は書き換えを終えてから止まる
 - 対象は画像と動画。判定は 2 段階
   1. **拡張子**で絞る（旧ツールのリスト: `.png .jpg .jpeg .webp .bmp` と
      `.mp4 .avi .mkv .webm .mov .wmv .flv .m4v .gif`）
   2. 処理中に **`items.fetchPreview` でプレビューが取れなかったらスキップ**
-- メニューの出し分けは manifest の `when.targets` で行う。Tag this item は `"targets": "files"`、
-  Tag everything in this folder は `"targets": "folders"`。**`extensions` は書かない**: 書くと画像と PDF を
+- メニューの出し分けは manifest の `when.targets` で行う。Tag / Retag は `"targets": "files"`、
+  Tag all in folder / Retag all in folder は `"targets": "folders"`。**`extensions` は書かない**: 書くと画像と PDF を
   混ぜて選んだときに項目ごと灰色になるので、押せるようにしておき、画像・動画以外はプラグイン側でスキップする
 - 結果は `message` の 1 行で返す（例: `Tagged 120, skipped 8, failed 2`）。一覧は `details`（§6-4）ができてから
 - 動画もプレビュー（MEGA が持つ代表フレームの JPEG）で推論する。動画をダウンロードしてフレームを抜く、
@@ -71,15 +76,10 @@ WD14 系のタグ付けモデル（ONNX）で MEGA 上の画像・動画を推�
 - onnxruntime-gpu は **1.23.2 に固定**。1.24 以降は CUDA 13 向けのビルドで、CUDA 12 の環境では CUDA プロバイダを読めず黙って CPU になる
 - 設定（モデル・閾値）は**プラグインフォルダの `config.json`**。アプリは場所を決めない（v1 の方針どおり）
 
-### 将来
-
-- **retag**（付け直し）: §1 で付与済みのアイテムはスキップすることにしたので、閾値やモデルを変えて
-  付け直すコマンドは将来実装する。`wd:` / `rating:` / `chara:` のタグを消してから付け直す（§6-7 が要る）
-
 ### 大きいフォルダと MEGA への負荷
 
-- Tag everything in this folder は `items.children` で配下を再帰的に列挙し（列挙中も進捗とキャンセルが効く）、
-  集めたファイルを Tag this item と同じ処理に流す。`items.children` の結果はタグを含むので、`items.get` は呼ばない
+- Tag all in folder は `items.children` で配下を再帰的に列挙し（列挙中も進捗とキャンセルが効く）、
+  集めたファイルを Tag と同じ処理に流す。`items.children` の結果はタグを含むので、`items.get` は呼ばない
 - 1 件ずつ順番に処理する（`fetchPreview` → 推論 → タグの追加）。先読みや並列化はしない
 - **MEGA に対する負荷テストはしない。**数百〜数千件を続けて流して API 制限がどこでかかるかを測る、
   という検証は、MEGA のサービスに意図的に負荷をかけることになり倫理上よくないので行わない。
@@ -178,7 +178,7 @@ character が 4 個以上の画像は 6,152 件（1.2%）。キャラは 1 タ�
 | 6-4 | 結果の詳細表示（設計書 §6-6 の `details` → トーストの［詳細］→ 結果ダイアログ）。スキップ・失敗の一覧、GPU が使えないときのエラーをここに出す | 任意（まずは `message` の 1 行で件数を出す） | `message` を 1 行のトーストに出すだけ。`details` は未実装 |
 | 6-5 | タグの一致判定を SDK に合わせる（大文字小文字・アクセントを無視） | 推奨 | アプリの事前チェック（`PluginHostApi::itemsUpdate`）は完全一致で比べている。SDK と食い違うので、`Long_Hair` があるところへ `long_hair` を add すると SDK が `API_EEXIST` を返して -32010 になり、remove は「無い」と判断されて黙って何もしない |
 | 6-6 | 10 個の上限に当たったときのエラーを、-32010 以外の分かる形で返すか | 要確認 | `API_ETOOMANY` は今 -32010（MegaError）として返る |
-| 6-7 | items.update でタグの remove を add より先に実行する | 将来の retag（§1）で必要 | 今の実行順は add → remove。タグが 10 個埋まっているアイテムで付け替えると、add の時点で `API_ETOOMANY` になり、何も消えないまま止まる |
+| 6-7 | items.update でタグの remove を add より先に実行する | 済（本体 `feature/plugin-v1`） | retag で 10 枠・3000 バイトが埋まっていても付け替えられる |
 | 6-8 | アプリの検索でタグを探せるようにする | 済（本体 `feature/plugin-v1`） | 検索ボックスに `tag:語` と書くとタグ検索（`tag:"空白入り"` も可）。複数書くと AND、部分一致。`tag:chara:hatsune_miku` のようにプレフィックスごと書けば種類で絞れる。何も付けない語は今までどおり名前検索 |
 | 6-9 | **初回の環境構築が起動待ちのタイムアウトに入る**: 新しい PC で初めて動かすと、`uv run` が Python を起動する前に venv を作り、依存パッケージ（onnxruntime-gpu など数百 MB）を取得する。その間ダイアログは「Preparing…」のままで、プラグインからは進捗を送れず、しかもこの時間が `initialize` の 5 分のタイムアウトに含まれる。案: (a) 配布手順に「最初に `uv sync`」と書く、(b) タイムアウトを延ばす、(c) manifest に一度だけ動かす `setup` コマンドを書けるようにし、アプリがその間は別の表示をする | 配布するまでに | 開発機は `uv sync` 済みなので起きない |
 | 6-10 | 進捗の件数に単位（MB など）を付けられるようにする | 後回し | `current / total` を数字のまま出す。プラグイン側で MB に換算して回避している |

@@ -7,7 +7,7 @@ import onnxruntime as ort
 
 import model
 from megaexplorer_plugin import CommandError, NoPreview, Plugin, RpcError
-from tags import build_tags, has_been_tagged, is_taggable, load_config
+from tags import build_tags, has_been_tagged, is_taggable, load_config, tag_changes
 
 plugin = Plugin()
 CONFIG_PATH = Path(__file__).with_name("config.json")
@@ -20,23 +20,45 @@ def check_env(ctx):
     return f"onnxruntime {ort.__version__} ({gpu}), {len(ctx.items)} item(s) selected"
 
 
+NO_FILES = "Nothing to tag: no images or videos selected"
+NO_FILES_IN_FOLDER = "Nothing to tag: no images or videos in this folder"
+
+
 @plugin.command("tag-items")
 def tag_items(ctx):
-    candidates = [item for item in ctx.items if item.is_file and is_taggable(item.name)]
-    if not candidates:
-        return "Nothing to tag: no images or videos selected"
-    return _tag(ctx, ctx.get_many(candidates))
+    files = _selected_files(ctx)
+    return _tag(ctx, files, retag=False) if files else NO_FILES
 
 
 @plugin.command("tag-folder")
 def tag_folder(ctx):
-    candidates = []
+    files = _files_in_folders(ctx)
+    return _tag(ctx, files, retag=False) if files else NO_FILES_IN_FOLDER
+
+
+@plugin.command("retag-items")
+def retag_items(ctx):
+    files = _selected_files(ctx)
+    return _tag(ctx, files, retag=True) if files else NO_FILES
+
+
+@plugin.command("retag-folder")
+def retag_folder(ctx):
+    files = _files_in_folders(ctx)
+    return _tag(ctx, files, retag=True) if files else NO_FILES_IN_FOLDER
+
+
+def _selected_files(ctx):
+    candidates = [item for item in ctx.items if item.is_file and is_taggable(item.name)]
+    return ctx.get_many(candidates) if candidates else []
+
+
+def _files_in_folders(ctx):
+    found = []
     for folder in ctx.items:
         if folder.is_folder:
-            candidates.extend(_taggable_files_under(ctx, folder))
-    if not candidates:
-        return "Nothing to tag: no images or videos in this folder"
-    return _tag(ctx, candidates)
+            found.extend(_taggable_files_under(ctx, folder))
+    return found
 
 
 def _taggable_files_under(ctx, folder):
@@ -54,16 +76,18 @@ def _taggable_files_under(ctx, folder):
     return found
 
 
-def _tag(ctx, candidates):
-    """candidates must carry their current tags (from items.get or items.children)."""
+def _tag(ctx, candidates, retag):
+    """candidates must carry their current tags (from items.get or items.children).
+    Without retag, items that already have a wd: tag are skipped; with it, the
+    plugin's tags are replaced, sending only the tags that actually change."""
     config = load_config(CONFIG_PATH)
-    todo = [item for item in candidates if not has_been_tagged(item.tags)]
+    todo = candidates if retag else [i for i in candidates if not has_been_tagged(i.tags)]
     already = len(candidates) - len(todo)
     if not todo:
         return f"Nothing to tag: {already} already tagged"
 
     tag_model = _load_model(ctx, config)
-    tagged = skipped = failed = 0
+    tagged = unchanged = skipped = failed = 0
     for n, item in enumerate(todo):
         ctx.check_cancelled()
         ctx.progress(n, len(todo), "Tagging…")
@@ -85,8 +109,12 @@ def _tag(ctx, candidates):
             print(f"{item.name}: no room for tags next to {item.tags}", file=sys.stderr)
             failed += 1
             continue
+        add, remove = tag_changes(item.tags, tags)
+        if not add and not remove:
+            unchanged += 1
+            continue
         try:
-            ctx.update(item, tags_add=tags)
+            ctx.update(item, tags_add=add, tags_remove=remove)
             print(f"{item.name}: {tags}", file=sys.stderr)
             tagged += 1
         except RpcError as error:
@@ -94,7 +122,9 @@ def _tag(ctx, candidates):
             failed += 1
     ctx.progress(len(todo), len(todo), "Tagging…")
 
-    parts = [f"Tagged {tagged}"]
+    parts = [f"{'Retagged' if retag else 'Tagged'} {tagged}"]
+    if unchanged:
+        parts.append(f"{unchanged} unchanged")
     if skipped:
         parts.append(f"{skipped} without a preview")
     if already:
