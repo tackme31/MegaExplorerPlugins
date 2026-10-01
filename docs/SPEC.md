@@ -19,6 +19,10 @@ WD14 系のタグ付けモデル（ONNX）で MEGA 上の画像・動画を推�
   1. **拡張子**で絞る（旧ツールのリスト: `.png .jpg .jpeg .webp .bmp` と
      `.mp4 .avi .mkv .webm .mov .wmv .flv .m4v .gif`）
   2. 処理中に **`items.fetchPreview` でプレビューが取れなかったらスキップ**
+- メニューの出し分けは manifest の `when.targets` で行う。Tag this item は `"targets": "files"`、
+  Tag everything in this folder は `"targets": "folders"`。**`extensions` は書かない**: 書くと画像と PDF を
+  混ぜて選んだときに項目ごと灰色になるので、押せるようにしておき、画像・動画以外はプラグイン側でスキップする
+- 結果は `message` の 1 行で返す（例: `Tagged 120, skipped 8, failed 2`）。一覧は `details`（§6-4）ができてから
 - 動画もプレビュー（MEGA が持つ代表フレームの JPEG）で推論する。動画をダウンロードしてフレームを抜く、
   ということはしない
 - **推論タグ（`wd:` タグ）がすでにあるアイテムはスキップする**
@@ -151,10 +155,10 @@ character が 4 個以上の画像は 6,152 件（1.2%）で、上限 3 個で�
 
 | # | 内容 | 必須度 | 現状 |
 | --- | --- | --- | --- |
-| 6-1 | **ファイルとフォルダでメニューを出し分ける**: 設計書（`docs/investigations/STUDY_PLUGIN_V1_DESIGN.md` §3・§4）の `when`（`sites` / `targets` / `minCount` / `maxCount` / `extensions`）を実装する。合わない項目は灰色、場所違いは非表示 | 必須（§1 の 2 コマンド） | 設計だけで未実装。`PluginManifest` は `when` を読んでおらず、全コマンドがファイルにもフォルダにも出て常に押せる |
+| 6-1 | **ファイルとフォルダでメニューを出し分ける**: 設計書（`docs/investigations/STUDY_PLUGIN_V1_DESIGN.md` §3・§4）の `when` のうち、まず **`targets`（`files`/`folders`/`any`）と `extensions`** だけを実装する。合わない項目は灰色。`sites`・`minCount`・`maxCount` は後回し | 必須（§1 の 2 コマンド） | 設計だけで未実装。`PluginManifest` は `when` を読んでおらず、全コマンドがファイルにもフォルダにも出て常に押せる |
 | 6-2 | フォルダ配下の再帰列挙（`items.descendants`） | あれば楽 | 未実装。`items.children` を再帰で呼べば代わりになる |
 | 6-3 | ItemRef / items.get に種別（`kind`）を載せる | 任意（今は拡張子で判定する） | なし |
-| 6-4 | 結果の詳細表示とエラーダイアログ（スキップ・失敗の一覧、GPU が使えないときのエラー） | 任意 | トーストの 1 行だけ |
+| 6-4 | 結果の詳細表示（設計書 §6-6 の `details` → トーストの［詳細］→ 結果ダイアログ）。スキップ・失敗の一覧、GPU が使えないときのエラーをここに出す | 任意（まずは `message` の 1 行で件数を出す） | `message` を 1 行のトーストに出すだけ。`details` は未実装 |
 | 6-5 | タグの一致判定を SDK に合わせる（大文字小文字・アクセントを無視） | 推奨 | アプリの事前チェック（`PluginHostApi::itemsUpdate`）は完全一致で比べている。SDK と食い違うので、`Long_Hair` があるところへ `long_hair` を add すると SDK が `API_EEXIST` を返して -32010 になり、remove は「無い」と判断されて黙って何もしない |
 | 6-6 | 10 個の上限に当たったときのエラーを、-32010 以外の分かる形で返すか | 要確認 | `API_ETOOMANY` は今 -32010（MegaError）として返る |
 | 6-7 | items.update でタグの remove を add より先に実行する | 将来の retag（§1）で必要 | 今の実行順は add → remove。タグが 10 個埋まっているアイテムで付け替えると、add の時点で `API_ETOOMANY` になり、何も消えないまま止まる |
