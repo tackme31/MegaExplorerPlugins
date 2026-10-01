@@ -22,20 +22,42 @@ def check_env(ctx):
 
 @plugin.command("tag-items")
 def tag_items(ctx):
-    return _tag(ctx, [item for item in ctx.items if item.is_file])
+    candidates = [item for item in ctx.items if item.is_file and is_taggable(item.name)]
+    if not candidates:
+        return "Nothing to tag: no images or videos selected"
+    return _tag(ctx, ctx.get_many(candidates))
 
 
 @plugin.command("tag-folder")
 def tag_folder(ctx):
-    raise CommandError("Tagging a folder is not implemented yet")
-
-
-def _tag(ctx, files):
-    config = load_config(CONFIG_PATH)
-    candidates = [item for item in files if is_taggable(item.name)]
+    candidates = []
+    for folder in ctx.items:
+        if folder.is_folder:
+            candidates.extend(_taggable_files_under(ctx, folder))
     if not candidates:
-        return "Nothing to tag: no images or videos selected"
-    todo = [item for item in ctx.get_many(candidates) if not has_been_tagged(item.tags)]
+        return "Nothing to tag: no images or videos in this folder"
+    return _tag(ctx, candidates)
+
+
+def _taggable_files_under(ctx, folder):
+    """Depth-first; children() already carries tags, so no items.get afterwards."""
+    found = []
+    pending = [folder]
+    while pending:
+        ctx.check_cancelled()
+        ctx.progress(message=f"Listing files… {len(found)} found")
+        for child in ctx.children(pending.pop()):
+            if child.is_folder:
+                pending.append(child)
+            elif child.is_file and is_taggable(child.name):
+                found.append(child)
+    return found
+
+
+def _tag(ctx, candidates):
+    """candidates must carry their current tags (from items.get or items.children)."""
+    config = load_config(CONFIG_PATH)
+    todo = [item for item in candidates if not has_been_tagged(item.tags)]
     already = len(candidates) - len(todo)
     if not todo:
         return f"Nothing to tag: {already} already tagged"
