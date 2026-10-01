@@ -49,8 +49,7 @@ def retag_folder(ctx):
 
 
 def _selected_files(ctx):
-    candidates = [item for item in ctx.items if item.is_file and is_taggable(item.name)]
-    return ctx.get_many(candidates) if candidates else []
+    return [item for item in ctx.items if item.is_file and is_taggable(item.name)]
 
 
 def _files_in_folders(ctx):
@@ -62,7 +61,7 @@ def _files_in_folders(ctx):
 
 
 def _taggable_files_under(ctx, folder):
-    """Depth-first; children() already carries tags, so no items.get afterwards."""
+    """Depth-first."""
     found = []
     pending = [folder]
     while pending:
@@ -77,8 +76,7 @@ def _taggable_files_under(ctx, folder):
 
 
 def _tag(ctx, candidates, retag):
-    """candidates must carry their current tags (from items.get or items.children).
-    Without retag, items that already have a wd: tag are skipped; with it, the
+    """Without retag, items that already have a wd: tag are skipped; with it, the
     plugin's tags are replaced; the app sends MEGA only the tags that change."""
     config = load_config(CONFIG_PATH)
     todo = candidates if retag else [i for i in candidates if not has_been_tagged(i.tags)]
