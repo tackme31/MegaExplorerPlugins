@@ -61,17 +61,14 @@ def _files_in_folders(ctx):
 
 
 def _taggable_files_under(ctx, folder):
-    """Depth-first."""
     found = []
-    pending = [folder]
-    while pending:
-        ctx.check_cancelled()
-        ctx.progress(message=f"Listing files… {len(found)} found")
-        for child in ctx.children(pending.pop()):
-            if child.is_folder:
-                pending.append(child)
-            elif child.is_file and is_taggable(child.name):
-                found.append(child)
+    ctx.progress(message="Listing files…")
+    for n, item in enumerate(ctx.descendants(folder, type="file"), 1):
+        if n % 100 == 0:
+            ctx.check_cancelled()
+            ctx.progress(message=f"Listing files… {len(found)} found")
+        if is_taggable(item.name):
+            found.append(item)
     return found
 
 

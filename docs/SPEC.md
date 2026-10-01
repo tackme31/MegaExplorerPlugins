@@ -1,6 +1,6 @@
 # WD Tagger プラグイン 仕様
 
-> **状態（2026-10-02）**: 機能は確定。Tag / Retag（選択・フォルダ）とも実装済み。プラグイン基盤の改善（§6-A）を進行中（1 = 6-5、2 = 6-12 済）。§1 が決定事項、§2 が MEGA 側の制約、§3 が処理の流れ、
+> **状態（2026-10-02）**: 機能は確定。Tag / Retag（選択・フォルダ）とも実装済み。プラグイン基盤の改善（§6-A）を進行中（1 = 6-5、2 = 6-12、3 = 6-2 済）。§1 が決定事項、§2 が MEGA 側の制約、§3 が処理の流れ、
 > §4 が決定の根拠になった実測、§5 が未決事項、§6 がこのプラグインを作るのに MegaExplorer 側の
 > プラグイン基盤で足りないもの。未決が決まったら §1 に移す。
 
@@ -79,8 +79,8 @@ WD14 系のタグ付けモデル（ONNX）で MEGA 上の画像・動画を推�
 
 ### 大きいフォルダと MEGA への負荷
 
-- Tag all in folder は `items.children` で配下を再帰的に列挙し（列挙中も進捗とキャンセルが効く）、
-  集めたファイルを Tag と同じ処理に流す。選択したファイルも `items.children` の結果もタグを含むので、`items.get` は呼ばない
+- Tag all in folder は `items.descendants`（`type: "file"`）で配下を全部列挙し（列挙中も進捗とキャンセルが効く）、
+  集めたファイルを Tag と同じ処理に流す。選択したファイルも `items.descendants` の結果もタグを含むので、`items.get` は呼ばない
 - 1 件ずつ順番に処理する（`fetchPreview` → 推論 → タグの追加）。先読みや並列化はしない
 - **MEGA に対する負荷テストはしない。**数百〜数千件を続けて流して API 制限がどこでかかるかを測る、
   という検証は、MEGA のサービスに意図的に負荷をかけることになり倫理上よくないので行わない。
@@ -118,13 +118,13 @@ sqlite 経由の検索も同じ関数を呼ぶ。1 回の検索で指定でき�
 
 ```
 command "tag-item" / "tag-folder":
-    targets = 選択アイテム                       # tag-folder なら items.children で配下を再帰列挙してファイルだけ
+    targets = 選択アイテム                       # tag-folder なら items.descendants で配下のファイルを全部
     targets = [t for t in targets if 拡張子が画像/動画]
     model = load_model()                          # CUDA が使えなければエラーで終了
     progress(0, len(targets))
     for item in targets:
         check_cancelled()
-        if item に wd: タグがある: skipped += 1; continue     # タグはコンテキスト / items.children の Item に入っている
+        if item に wd: タグがある: skipped += 1; continue     # タグはコンテキスト / items.descendants の Item に入っている
         try:
             jpg = fetch_preview(item)
         except NoPreview: skipped += 1; continue
@@ -174,7 +174,7 @@ character が 4 個以上の画像は 6,152 件（1.2%）。キャラは 1 タ�
 | # | 内容 | 必須度 | 現状 |
 | --- | --- | --- | --- |
 | 6-1 | **ファイルとフォルダでメニューを出し分ける**（設計書 `docs/investigations/STUDY_PLUGIN_V1_DESIGN.md` §3・§4 の `when`） | 済（本体 `feature/plugin-v1`） | `targets`（`files`/`folders`/`any`）と `extensions` を実装。合わない項目は灰色。`sites`・`minCount`・`maxCount` は未実装 |
-| 6-2 | フォルダ配下の再帰列挙（`items.descendants`） | **改善予定**（§6-A） | 未実装。今は `items.children` を再帰で呼んでいる（`main.py` の `_taggable_files_under`） |
+| 6-2 | フォルダ配下の再帰列挙（`items.descendants`） | 済（本体 `feature/plugin-v1`） | 深さ優先の前順、最初の呼び出しで一覧（ハンドル）を確定し、各ページを返す時点で消えていたものは飛ばす。カーソルは `"<一覧番号>:<位置>"` で、一覧は実行が終わると捨てる。`_taggable_files_under` は `ctx.descendants(folder, type="file")` を回すだけになった |
 | 6-3 | Item に種別（`kind`）を載せる | 任意（今は拡張子で判定する） | なし |
 | 6-4 | 結果の詳細表示（設計書 §6-6 の `details` → トーストの［詳細］→ 結果ダイアログ）。スキップ・失敗の一覧、GPU が使えないときのエラーをここに出す | **改善予定**（§6-A） | `message` を 1 行のトーストに出すだけ。アイテムごとの失敗は標準エラー出力 → アプリのログにしか出ない |
 | 6-5 | タグ更新の仕様: 一致判定を SDK に合わせる＋ `add` と `remove` の重複を許す | 済（本体 `feature/plugin-v1`） | 結果は「今のタグ − `remove` ＋ `add`」で、両方にあるタグは残る。アプリが差分だけを SDK に送る（消す → 付ける）。一致判定は SDK の add/remove と同じく大文字小文字だけ無視し、アクセントは区別する（§2。アクセントも無視するのは検索だけだった）。remove はアイテムに付いている表記で送る。プラグインの `tags.tag_changes` は削除 |
@@ -196,7 +196,7 @@ WD Tagger を一通り作ってみて、どのプラグインでも効く書き�
 | --- | --- | --- |
 | 1 | 6-5 タグ更新（**済**） | `tags: {add, remove}` を「`remove` を消してから `add` を付けた状態にする」と定義し直す。両方に同じタグがあればそのタグは残す（エラーにしない）。アプリが現在のタグとの差分を取り、実際に変わるものだけ SDK に送る（消す → 付ける）。一致判定は SDK と同じ（実装時に SDK を確かめたら、add/remove は大文字小文字だけ無視でアクセントは区別だったので、そちらに合わせた）。`tags.set`（最終形を丸ごと渡す）は、ユーザーのタグを入れ忘れると消してしまうので採らない。retag は「古いプラグインのタグを全部 remove、新しいタグを全部 add」と書くだけになり、`tag_changes` は不要になる |
 | 2 | 6-12 コンテキストの `items`（**済**） | `items.get` と同じ `Item` 形式にする。**設計書 §6-2 の「コンテキストは ID と名前だけ」からの変更**。アプリ側はメモリ上の読み取りなので数千件でも重くない。値がクリック時点のものなのは今と同じ |
-| 3 | 6-2 `items.descendants` | 設計書 §6-3・§6-5 どおり: `{handle, type?, cursor?, limit?}` → `{items, nextCursor}`、深さ優先の前順、最初の呼び出しで一覧を確定。ヘルパーに `ctx.descendants()` を足す |
+| 3 | 6-2 `items.descendants`（**済**） | 設計書 §6-3・§6-5 どおり: `{handle, type?, cursor?, limit?}` → `{items, nextCursor}`、深さ優先の前順、最初の呼び出しで一覧を確定。ヘルパーに `ctx.descendants()` を足す |
 | 4 | 6-13 `ui.confirm` | 設計書 §6-3 どおり: `{title?, message, okLabel?, danger?}` → `{ok}`。ユーザーが答えるまで応答しない。Retag（特にフォルダ）で使う |
 | 5 | 6-4 `details` | 設計書 §6-6 どおり: 結果の `details`（プレーンテキスト）があればトーストに［詳細］、押すと選択・コピーできるダイアログ。スキップ・失敗の一覧を出す |
 
