@@ -58,13 +58,6 @@ def has_been_tagged(tags):
     return any(tag.startswith(GENERAL_PREFIX) for tag in tags or ())
 
 
-def tag_changes(existing_tags, new_tags):
-    """(add, remove) that turn the plugin's tags among existing_tags into new_tags,
-    leaving the user's own tags and any tag already right alone."""
-    old = [t for t in existing_tags or () if is_plugin_tag(t)]
-    return [t for t in new_tags if t not in old], [t for t in old if t not in new_tags]
-
-
 def _tag_bytes(tags):
     return len(",".join(tags).encode("utf-8"))
 

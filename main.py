@@ -7,7 +7,7 @@ import onnxruntime as ort
 
 import model
 from megaexplorer_plugin import CommandError, NoPreview, Plugin, RpcError
-from tags import build_tags, has_been_tagged, is_taggable, load_config, tag_changes
+from tags import build_tags, has_been_tagged, is_plugin_tag, is_taggable, load_config
 
 plugin = Plugin()
 CONFIG_PATH = Path(__file__).with_name("config.json")
@@ -79,7 +79,7 @@ def _taggable_files_under(ctx, folder):
 def _tag(ctx, candidates, retag):
     """candidates must carry their current tags (from items.get or items.children).
     Without retag, items that already have a wd: tag are skipped; with it, the
-    plugin's tags are replaced, sending only the tags that actually change."""
+    plugin's tags are replaced; the app sends MEGA only the tags that change."""
     config = load_config(CONFIG_PATH)
     todo = candidates if retag else [i for i in candidates if not has_been_tagged(i.tags)]
     already = len(candidates) - len(todo)
@@ -109,17 +109,18 @@ def _tag(ctx, candidates, retag):
             print(f"{item.name}: no room for tags next to {item.tags}", file=sys.stderr)
             failed += 1
             continue
-        add, remove = tag_changes(item.tags, tags)
-        if not add and not remove:
-            unchanged += 1
-            continue
+        old = [t for t in item.tags if is_plugin_tag(t)]
         try:
-            ctx.update(item, tags_add=add, tags_remove=remove)
-            print(f"{item.name}: {tags}", file=sys.stderr)
-            tagged += 1
+            after = ctx.update(item, tags_add=tags, tags_remove=old)
         except RpcError as error:
             print(f"{item.name}: update failed: {error}", file=sys.stderr)
             failed += 1
+            continue
+        if set(after.tags) == set(item.tags):
+            unchanged += 1
+        else:
+            print(f"{item.name}: {tags}", file=sys.stderr)
+            tagged += 1
     ctx.progress(len(todo), len(todo), "Tagging…")
 
     parts = [f"{'Retagged' if retag else 'Tagged'} {tagged}"]
