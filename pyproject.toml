@@ -1,0 +1,14 @@
+[project]
+name = "wdtagger-plugin"
+version = "0.1.0"
+description = "MegaExplorer plugin: tag images with a WD14 tagger model"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "huggingface-hub>=1.3",
+    "numpy>=2.4",
+    "onnxruntime-gpu>=1.23",
+    "pillow>=12.1",
+]
+
+[tool.uv]
+package = false
