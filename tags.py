@@ -8,7 +8,7 @@ from pathlib import Path
 
 GENERAL_PREFIX = "wd:"
 RATING_PREFIX = "rating:"
-CHARACTER_PREFIX = "character:"
+CHARACTER_PREFIX = "chara:"
 PLUGIN_PREFIXES = (GENERAL_PREFIX, RATING_PREFIX, CHARACTER_PREFIX)
 
 # MegaClient::MAX_NUMBER_TAGS / MAX_TAGS_SIZE (bytes of all tags joined with ',').
@@ -29,7 +29,6 @@ class Config:
     thresh_general: float = 0.30
     thresh_character: float = 0.50
     thresh_rating: float = 0.40
-    max_characters: int = 3
     max_general_bytes: int = 2000
 
 
@@ -64,11 +63,12 @@ def _tag_bytes(tags):
 
 
 def build_tags(probs, names, categories, config, existing_tags=()):
-    """The tags to add, best first: wd:, then rating:, then character:s.
+    """The tags to add: wd:, then rating:, then one tag of every chara: above
+    the threshold, best first and space-separated like the wd: one.
 
     Fits them next to existing_tags within MEGA's tag count and byte limits,
-    dropping characters first, then the rating, then the lowest-scoring
-    general tags. Returns [] when not even the wd: tag fits.
+    dropping the lowest-scoring characters first, then the rating, then the
+    lowest-scoring general tags. Returns [] when not even the wd: tag fits.
     """
     def above(category, threshold):
         picked = [
@@ -81,7 +81,7 @@ def build_tags(probs, names, categories, config, existing_tags=()):
 
     general = above(CATEGORY_GENERAL, config.thresh_general)
     ratings = above(CATEGORY_RATING, config.thresh_rating)[:1]
-    characters = above(CATEGORY_CHARACTER, config.thresh_character)[: config.max_characters]
+    characters = above(CATEGORY_CHARACTER, config.thresh_character)
 
     def general_tag(words):
         return GENERAL_PREFIX + " ".join(words)
@@ -89,17 +89,23 @@ def build_tags(probs, names, categories, config, existing_tags=()):
     while general and len(general_tag(general).encode("utf-8")) > config.max_general_bytes:
         general.pop()
 
+    def assemble():
+        tags = [general_tag(general)] + [RATING_PREFIX + r for r in ratings]
+        if characters:
+            tags.append(" ".join(CHARACTER_PREFIX + c for c in characters))
+        return tags
+
     user_tags = [t for t in existing_tags or () if not is_plugin_tag(t)]
-    extras = [RATING_PREFIX + r for r in ratings] + [CHARACTER_PREFIX + c for c in characters]
-    while extras and (
-        len(user_tags) + 1 + len(extras) > MEGA_MAX_TAGS
-        or _tag_bytes(user_tags + [general_tag(general)] + extras) > MEGA_MAX_TAGS_BYTES
-    ):
-        extras.pop()
     if len(user_tags) + 1 > MEGA_MAX_TAGS:
         return []
-    while general and _tag_bytes(user_tags + [general_tag(general)]) > MEGA_MAX_TAGS_BYTES:
-        general.pop()
-    if _tag_bytes(user_tags + [general_tag(general)]) > MEGA_MAX_TAGS_BYTES:
-        return []
-    return [general_tag(general)] + extras
+    while (len(user_tags) + len(assemble()) > MEGA_MAX_TAGS
+           or _tag_bytes(user_tags + assemble()) > MEGA_MAX_TAGS_BYTES):
+        if characters:
+            characters.pop()
+        elif ratings:
+            ratings.pop()
+        elif general:
+            general.pop()
+        else:
+            return []
+    return assemble()

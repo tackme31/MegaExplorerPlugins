@@ -23,17 +23,23 @@ class BuildTagsTest(unittest.TestCase):
         p = probs(0.9, 0.2, 0.99, 0.5, 0.29, 0.8, 0.6, 0.0, 0.0)
         self.assertEqual(
             build_tags(p, NAMES, CATS, Config()),
-            ["wd:1girl long_hair", "rating:general", "character:hatsune_miku",
-             "character:kagamine_rin"],
+            ["wd:1girl long_hair", "rating:general", "chara:hatsune_miku chara:kagamine_rin"],
         )
 
-    def test_keeps_only_the_best_rating_and_three_characters(self):
-        p = probs(0.5, 0.7, 0.9, 0.0, 0.0, 0.9, 0.8, 0.7, 0.6)
-        tags = build_tags(p, NAMES, CATS, Config())
-        self.assertIn("rating:sensitive", tags)
-        self.assertNotIn("rating:general", tags)
-        self.assertNotIn("character:kaito", tags)
-        self.assertEqual(len(tags), 5)
+    def test_puts_every_character_in_one_tag_and_keeps_the_best_rating(self):
+        p = probs(0.5, 0.7, 0.9, 0.0, 0.0, 0.6, 0.8, 0.7, 0.9)
+        self.assertEqual(
+            build_tags(p, NAMES, CATS, Config()),
+            ["wd:1girl", "rating:sensitive",
+             "chara:kaito chara:kagamine_rin chara:megurine_luka chara:hatsune_miku"],
+        )
+
+    def test_drops_lowest_characters_first_past_the_total_byte_limit(self):
+        p = probs(0.0, 0.0, 0.99, 0.0, 0.0, 0.9, 0.8, 0.0, 0.0)
+        room = len("wd:1girl,chara:hatsune_miku")
+        user = ["x" * (3000 - room - 1)]
+        self.assertEqual(build_tags(p, NAMES, CATS, Config(), user),
+                         ["wd:1girl", "chara:hatsune_miku"])
 
     def test_still_marks_an_item_with_no_general_tag(self):
         p = probs(0.0, 0.0, 0.1, 0.1, 0.1, 0.0, 0.0, 0.0, 0.0)
@@ -54,7 +60,7 @@ class BuildTagsTest(unittest.TestCase):
 
     def test_ignores_its_own_old_tags_when_counting(self):
         p = probs(0.9, 0.0, 0.99, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-        old = ["wd:x", "rating:explicit"] + [f"mine{i}" for i in range(8)]
+        old = ["wd:x", "rating:explicit", "chara:x"] + [f"mine{i}" for i in range(7)]
         self.assertEqual(build_tags(p, NAMES, CATS, Config(), old), ["wd:1girl", "rating:general"])
 
     def test_trims_general_to_fit_the_total_byte_limit(self):
