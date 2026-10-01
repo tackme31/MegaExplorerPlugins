@@ -14,4 +14,14 @@ def check_env(ctx):
     return f"onnxruntime {ort.__version__} ({gpu}), {len(ctx.items)} item(s) selected"
 
 
+@plugin.command("tag-items")
+def tag_items(ctx):
+    return f"tag-items: not implemented yet ({len(ctx.items)} file(s))"
+
+
+@plugin.command("tag-folder")
+def tag_folder(ctx):
+    return f"tag-folder: not implemented yet ({len(ctx.items)} folder(s))"
+
+
 plugin.run()

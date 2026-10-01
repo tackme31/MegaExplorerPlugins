@@ -6,6 +6,10 @@
   "apiVersion": 1,
   "run": { "command": "uv", "args": ["run", "--quiet", "main.py"] },
   "commands": [
+    { "id": "tag-items", "title": "Tag this item", "progress": true,
+      "when": { "targets": "files" } },
+    { "id": "tag-folder", "title": "Tag everything in this folder", "progress": true,
+      "when": { "targets": "folders" } },
     { "id": "check-env", "title": "Check environment" }
   ]
 }
