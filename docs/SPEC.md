@@ -13,7 +13,7 @@ WD14 系のタグ付けモデル（ONNX）で MEGA 上の画像・動画を推�
 ### コマンドと対象
 
 - コンテキストメニュー（WD Tagger のサブメニュー）に 4 コマンド（表示は英語）
-  - ファイルを右クリック: **Tag** / **Retag**
+  - ファイルを右クリック: **Tag selected** / **Retag selected**
   - フォルダを右クリック: **Tag all in folder** / **Retag all in folder**（配下を再帰的に）
   - Tag は `wd:` タグがあるアイテムを飛ばす。Retag は全件を推論し直し、プラグインのタグ（`wd:` / `rating:` /
     `chara:`）を新しい結果に置き換える。送るのは変わったタグだけ（消すのは古いタグにしかないもの、
@@ -24,7 +24,7 @@ WD14 系のタグ付けモデル（ONNX）で MEGA 上の画像・動画を推�
   1. **拡張子**で絞る（旧ツールのリスト: `.png .jpg .jpeg .webp .bmp` と
      `.mp4 .avi .mkv .webm .mov .wmv .flv .m4v .gif`）
   2. 処理中に **`items.fetchPreview` でプレビューが取れなかったらスキップ**
-- メニューの出し分けは manifest の `when.targets` で行う。Tag / Retag は `"targets": "files"`、
+- メニューの出し分けは manifest の `when.targets` で行う。Tag selected / Retag selected は `"targets": "files"`、
   Tag all in folder / Retag all in folder は `"targets": "folders"`。**`extensions` は書かない**: 書くと画像と PDF を
   混ぜて選んだときに項目ごと灰色になるので、押せるようにしておき、画像・動画以外はプラグイン側でスキップする
 - 結果は `message` の 1 行で返す（例: `Tagged 120, skipped 8, failed 2`）。一覧は `details`（§6-4）ができてから
