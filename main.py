@@ -39,13 +39,27 @@ def tag_folder(ctx):
 @plugin.command("retag-items")
 def retag_items(ctx):
     files = _selected_files(ctx)
-    return _tag(ctx, files, retag=True) if files else NO_FILES
+    if not files:
+        return NO_FILES
+    return _tag(ctx, files, retag=True) if _confirm_retag(ctx, files) else None
 
 
 @plugin.command("retag-folder")
 def retag_folder(ctx):
     files = _files_in_folders(ctx)
-    return _tag(ctx, files, retag=True) if files else NO_FILES_IN_FOLDER
+    if not files:
+        return NO_FILES_IN_FOLDER
+    return _tag(ctx, files, retag=True) if _confirm_retag(ctx, files) else None
+
+
+def _confirm_retag(ctx, files):
+    """Retag throws away the plugin's current tags, so ask first; Cancel ends the
+    command without a toast."""
+    what = f'"{files[0].name}"' if len(files) == 1 else f"{len(files)} files"
+    return ctx.confirm(
+        f"Replace the wd:, rating: and chara: tags on {what} with new results? "
+        "Tags you added yourself are kept.",
+        title="Retag", ok_label="Retag", danger=True)
 
 
 def _selected_files(ctx):
