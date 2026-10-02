@@ -7,6 +7,7 @@ import onnxruntime as ort
 
 import model
 from megaexplorer_plugin import CommandError, NoPreview, Plugin, RpcError
+from single_run import one_at_a_time
 from tags import build_tags, has_been_tagged, is_plugin_tag, is_taggable, load_config
 
 plugin = Plugin()
@@ -18,18 +19,21 @@ NO_FILES_IN_FOLDER = "Nothing to tag: no images or videos in this folder"
 
 
 @plugin.command("tag-items")
+@one_at_a_time
 def tag_items(ctx):
     files = _selected_files(ctx)
     return _tag(ctx, files, retag=False) if files else NO_FILES
 
 
 @plugin.command("tag-folder")
+@one_at_a_time
 def tag_folder(ctx):
     files = _files_in_folders(ctx)
     return _tag(ctx, files, retag=False) if files else NO_FILES_IN_FOLDER
 
 
 @plugin.command("retag-items")
+@one_at_a_time
 def retag_items(ctx):
     files = _selected_files(ctx)
     if not files:
@@ -38,6 +42,7 @@ def retag_items(ctx):
 
 
 @plugin.command("retag-folder")
+@one_at_a_time
 def retag_folder(ctx):
     files = _files_in_folders(ctx)
     if not files:
