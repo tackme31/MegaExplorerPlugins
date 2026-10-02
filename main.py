@@ -13,21 +13,6 @@ plugin = Plugin()
 CONFIG_PATH = Path(__file__).with_name("config.json")
 
 
-@plugin.command("check-env")
-def check_env(ctx):
-    providers = ort.get_available_providers()
-    gpu = "CUDA is available" if "CUDAExecutionProvider" in providers else "CUDA is NOT available"
-    config = load_config(CONFIG_PATH)
-    return "\n".join([
-        f"onnxruntime {ort.__version__}: {gpu}",
-        "",
-        f"Providers: {', '.join(providers)}",
-        f"Model: {config.repo_id}",
-        f"Thresholds: general {config.thresh_general:.2f}, character {config.thresh_character:.2f}, "
-        f"rating {config.thresh_rating:.2f}",
-    ])
-
-
 NO_FILES = "Nothing to tag: no images or videos selected"
 NO_FILES_IN_FOLDER = "Nothing to tag: no images or videos in this folder"
 
@@ -167,8 +152,7 @@ def _load_model(ctx, config):
             "CUDA is not available, so the model cannot run on the GPU\n\n"
             f"onnxruntime {ort.__version__}, providers: {', '.join(ort.get_available_providers())}\n"
             "This plugin needs an NVIDIA GPU with CUDA 12 and cuDNN 9 "
-            "(onnxruntime-gpu 1.24 and later need CUDA 13).\n"
-            "Run \"Check environment\" to see what was found.")
+            "(onnxruntime-gpu 1.24 and later need CUDA 13).")
     return tag_model
 
 
