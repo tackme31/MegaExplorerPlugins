@@ -6,14 +6,14 @@
   "apiVersion": 1,
   "run": { "command": "uv", "args": ["run", "--quiet", "main.py"] },
   "commands": [
-    { "id": "tag-items", "title": "Tag selected", "progress": true,
+    { "id": "tag-items", "title": "Tag selected", "progress": true, "result": "dialog",
       "when": { "targets": "files" } },
-    { "id": "tag-folder", "title": "Tag all in folder", "progress": true,
+    { "id": "tag-folder", "title": "Tag all in folder", "progress": true, "result": "dialog",
       "when": { "targets": "folders" } },
-    { "id": "retag-items", "title": "Retag selected", "progress": true,
+    { "id": "retag-items", "title": "Retag selected", "progress": true, "result": "dialog",
       "when": { "targets": "files" } },
-    { "id": "retag-folder", "title": "Retag all in folder", "progress": true,
+    { "id": "retag-folder", "title": "Retag all in folder", "progress": true, "result": "dialog",
       "when": { "targets": "folders" } },
-    { "id": "check-env", "title": "Check environment" }
+    { "id": "check-env", "title": "Check environment", "result": "dialog" }
   ]
 }

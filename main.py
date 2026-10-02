@@ -16,8 +16,16 @@ CONFIG_PATH = Path(__file__).with_name("config.json")
 @plugin.command("check-env")
 def check_env(ctx):
     providers = ort.get_available_providers()
-    gpu = "CUDA" if "CUDAExecutionProvider" in providers else "CPU only"
-    return f"onnxruntime {ort.__version__} ({gpu}), {len(ctx.items)} item(s) selected"
+    gpu = "CUDA is available" if "CUDAExecutionProvider" in providers else "CUDA is NOT available"
+    config = load_config(CONFIG_PATH)
+    return "\n".join([
+        f"onnxruntime {ort.__version__}: {gpu}",
+        "",
+        f"Providers: {', '.join(providers)}",
+        f"Model: {config.repo_id}",
+        f"Thresholds: general {config.thresh_general:.2f}, character {config.thresh_character:.2f}, "
+        f"rating {config.thresh_rating:.2f}",
+    ])
 
 
 NO_FILES = "Nothing to tag: no images or videos selected"
@@ -96,18 +104,19 @@ def _tag(ctx, candidates, retag):
         return f"Nothing to tag: {already} already tagged"
 
     tag_model = _load_model(ctx, config)
-    tagged = unchanged = skipped = failed = 0
+    tagged = unchanged = 0
+    failed = []      # "<path>: <why>"
+    no_preview = []  # paths
     for n, item in enumerate(todo):
         ctx.check_cancelled()
         ctx.progress(n, len(todo), "Tagging…")
         try:
             preview = ctx.fetch_preview(item)
         except NoPreview:
-            skipped += 1
+            no_preview.append(item.path)
             continue
         except RpcError as error:
-            print(f"{item.name}: preview failed: {error}", file=sys.stderr)
-            failed += 1
+            failed.append(f"{item.path}: preview failed: {error}")
             continue
         try:
             probs = tag_model.predict(preview)
@@ -115,15 +124,13 @@ def _tag(ctx, candidates, retag):
             preview.unlink(missing_ok=True)
         tags = build_tags(probs, tag_model.names, tag_model.categories, config, item.tags)
         if not tags:
-            print(f"{item.name}: no room for tags next to {item.tags}", file=sys.stderr)
-            failed += 1
+            failed.append(f"{item.path}: no room for tags next to {item.tags}")
             continue
         old = [t for t in item.tags if is_plugin_tag(t)]
         try:
             after = ctx.update(item, tags_add=tags, tags_remove=old)
         except RpcError as error:
-            print(f"{item.name}: update failed: {error}", file=sys.stderr)
-            failed += 1
+            failed.append(f"{item.path}: update failed: {error}")
             continue
         if set(after.tags) == set(item.tags):
             unchanged += 1
@@ -135,13 +142,17 @@ def _tag(ctx, candidates, retag):
     parts = [f"{'Retagged' if retag else 'Tagged'} {tagged}"]
     if unchanged:
         parts.append(f"{unchanged} unchanged")
-    if skipped:
-        parts.append(f"{skipped} without a preview")
+    if no_preview:
+        parts.append(f"{len(no_preview)} without a preview")
     if already:
         parts.append(f"{already} already tagged")
     if failed:
-        parts.append(f"{failed} failed (see the log)")
-    return ", ".join(parts)
+        parts.append(f"{len(failed)} failed")
+    lines = [", ".join(parts)]
+    for heading, entries in (("Failed:", failed), ("Without a preview (skipped):", no_preview)):
+        if entries:
+            lines += ["", heading] + [f"  {entry}" for entry in entries]
+    return "\n".join(lines)
 
 
 def _load_model(ctx, config):
@@ -152,7 +163,12 @@ def _load_model(ctx, config):
     ctx.progress(message="Loading model…")
     tag_model = model.TagModel(model_path, tags_path)
     if not tag_model.on_gpu:
-        raise CommandError("CUDA is not available, so the model cannot run on the GPU")
+        raise CommandError(
+            "CUDA is not available, so the model cannot run on the GPU\n\n"
+            f"onnxruntime {ort.__version__}, providers: {', '.join(ort.get_available_providers())}\n"
+            "This plugin needs an NVIDIA GPU with CUDA 12 and cuDNN 9 "
+            "(onnxruntime-gpu 1.24 and later need CUDA 13).\n"
+            "Run \"Check environment\" to see what was found.")
     return tag_model
 
 
