@@ -47,7 +47,6 @@ int main(int argc, char* argv[])
     qInstallMessageHandler(logToStderr);
     QApplication app(argc, argv);
     QApplication::setApplicationName(QStringLiteral("MegaDirStat"));
-    QApplication::setApplicationVersion(QStringLiteral(MEGADIRSTAT_VERSION));
     // The run ends with the app's shutdown request, not with the window.
     QApplication::setQuitOnLastWindowClosed(false);
     applyColorSchemeOverride();

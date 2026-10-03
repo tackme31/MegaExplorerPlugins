@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(MegaDirStatPlugin VERSION 0.1.0 LANGUAGES CXX)
+# The version lives in plugin.json only; the app passes it back in initialize.
+project(MegaDirStatPlugin LANGUAGES CXX)
 
 # scripts/deploy.ps1 installs into the plugin folder's bin/, flat: the exe next
 # to Qt's DLLs. Must precede qt_standard_project_setup(), whose GNUInstallDirs
@@ -53,7 +54,6 @@ qt_add_resources(MegaDirStatPlugin appicon
         resources/appicon-64.png
         resources/appicon-256.png)
 target_link_libraries(MegaDirStatPlugin PRIVATE DirStatCore Qt6::Widgets DirStatWarnings)
-target_compile_definitions(MegaDirStatPlugin PRIVATE MEGADIRSTAT_VERSION="${PROJECT_VERSION}")
 
 enable_testing()
 function(dirstat_add_test name)
