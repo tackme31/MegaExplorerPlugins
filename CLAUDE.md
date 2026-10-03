@@ -17,6 +17,7 @@ and its own README (features, installation, building) and LICENSE. `README.md` h
 | --- | --- | --- |
 | `dirstat_plugin/` | MegaDirStat: size tree + treemap of a folder, in its own window. Read-only. | C++20 / Qt 6 Widgets |
 | `wdtagger_plugin/` | WD Tagger: tags images/videos with a WD14 model on the GPU, as MEGA tags | Python / uv |
+| `wdtagquerybuilder_plugin/` | WD Tag Query Builder: builds a `tag:` query over WD Tagger's tags, with suggestions and a match count. Read-only. | Python / uv |
 
 Branch `main` only, pushed to `origin` (GitHub); pushing it is fine. Releases are zips of one
 plugin folder, published as GitHub releases by `/release` (`.claude/skills/release/`).
@@ -34,9 +35,9 @@ app's log.
 When a plugin needs something the API lacks, that is a change to MEGA Explorer, not a workaround
 here: say so and propose it.
 
-The Python helper `wdtagger_plugin/megaexplorer_plugin.py` is a copy of the one in MEGA Explorer's
-sample plugin (`plugin_sample/megaexplorer_plugin.py` in that repository). Don't edit the copy on
-its own; changes go to the original first, then get copied here.
+The Python plugins' `megaexplorer_plugin.py` is a copy of the helper in MEGA Explorer's sample
+plugin (`plugin_sample/megaexplorer_plugin.py` in that repository). Don't edit a copy on its own;
+changes go to the original first, then get copied into every Python plugin here.
 
 ## Running a plugin in the app
 
@@ -46,7 +47,7 @@ its own; changes go to the original first, then get copied here.
 | Release (the user's **production** account) | `%LOCALAPPDATA%\MegaExplorer\MegaExplorer\plugins\` |
 
 - **Development uses the dev profile**, with the plugin folder linked in by a directory junction
-  (`mklink /J ...\MegaExplorer-dev\plugins\<name> <plugin folder>`); both plugins are linked that
+  (`mklink /J ...\MegaExplorer-dev\plugins\<name> <plugin folder>`); every plugin here is linked that
   way. Plugins are discovered at app start: after changing `plugin.json`, the app must be
   restarted. A program change applies on the next click.
 - **The production folder holds copies**, not junctions, so a rebuild here never breaks the
@@ -99,6 +100,18 @@ uv run python -m unittest
   own endings when editing it.
 - `docs/SPEC.md` (Japanese) holds the design decisions and measurements. Read it before changing
   behaviour, and record a new decision there.
+
+## wdtagquerybuilder_plugin (Python / uv)
+
+```
+uv sync
+uv run python -m unittest
+```
+
+- No dependencies beyond Python; the window is tkinter. `tagquery.py` is the testable part (index,
+  suggestions, match count, query text), `main.py` the window and the counting thread.
+- The match count must follow MEGA Explorer's search rule exactly; `docs/SPEC.md` (Japanese) says
+  which rule and why each deviation was closed. Read it before changing behaviour.
 
 ## Writing docs and commits
 
