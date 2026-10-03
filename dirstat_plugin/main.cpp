@@ -4,7 +4,6 @@
 #include <QApplication>
 #include <QIcon>
 #include <QMessageBox>
-#include <QStyleHints>
 
 #include <cstdio>
 
@@ -25,21 +24,6 @@ void logToStderr(QtMsgType type, const QMessageLogContext& context, const QStrin
     std::fflush(stderr);
 }
 
-// The plugin inherits MEGA Explorer's environment, so its own light/dark
-// override applies here too.
-void applyColorSchemeOverride()
-{
-    const QByteArray scheme = qgetenv("MEGAEXPLORER_COLOR_SCHEME");
-    if (scheme == "dark")
-    {
-        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
-    }
-    else if (scheme == "light")
-    {
-        QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
-    }
-}
-
 } // namespace
 
 int main(int argc, char* argv[])
@@ -49,7 +33,6 @@ int main(int argc, char* argv[])
     QApplication::setApplicationName(QStringLiteral("MegaDirStat"));
     // The run ends with the app's shutdown request, not with the window.
     QApplication::setQuitOnLastWindowClosed(false);
-    applyColorSchemeOverride();
 
     {
         QIcon windowIcon;

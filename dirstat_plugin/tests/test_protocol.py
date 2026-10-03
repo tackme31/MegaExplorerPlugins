@@ -107,6 +107,11 @@ class ProtocolTest(unittest.TestCase):
         self.assertEqual(response, {"jsonrpc": "2.0", "id": 3, "result": {}})
         self.assertEqual(code, 0)
 
+    def test_initialize_accepts_the_app_colour_scheme(self):
+        self.host.request(1, "initialize", {"apiVersion": 1, "app": {"colorScheme": "dark"}})
+        self.assertEqual(self.host.next()["result"], {"apiVersion": 1})
+        self.assertEqual(self.host.shutdown()[1], 0)
+
     def test_exits_when_stdin_closes(self):
         self.host.initialize()
         self.host.proc.stdin.close()

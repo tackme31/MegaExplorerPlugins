@@ -5,7 +5,9 @@
 #include "ui/MainWindow.h"
 
 #include <QCoreApplication>
+#include <QGuiApplication>
 #include <QJsonArray>
+#include <QStyleHints>
 #include <QTimer>
 
 namespace
@@ -35,6 +37,19 @@ void PluginHost::onRequest(const QJsonValue& id, const QString& method, const QJ
 {
     if (method == QLatin1String("initialize"))
     {
+        // Match the app's theme, which may be its own setting rather than the OS's.
+        const QString scheme = params.value(QLatin1String("app"))
+                                   .toObject()
+                                   .value(QLatin1String("colorScheme"))
+                                   .toString();
+        if (scheme == QLatin1String("dark"))
+        {
+            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Dark);
+        }
+        else if (scheme == QLatin1String("light"))
+        {
+            QGuiApplication::styleHints()->setColorScheme(Qt::ColorScheme::Light);
+        }
         mRpc.respond(id, QJsonObject{{QLatin1String("apiVersion"), kApiVersion}});
     }
     else if (method == QLatin1String("command.execute"))
