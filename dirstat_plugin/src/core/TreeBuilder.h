@@ -15,7 +15,9 @@ class TreeBuilder
 public:
     TreeBuilder();
 
-    void addRoot(const QString& handle, const QString& name);
+    // revealable false for the Cloud Drive root itself, which ui.reveal refuses
+    // (it is in no folder): the node then gets no handle.
+    void addRoot(const QString& handle, const QString& name, bool revealable = true);
 
     // An Item with at least handle, name, type and parent (size and mtime for
     // files). items.descendants is pre-order, so a parent always precedes its

@@ -5,10 +5,13 @@ TreeBuilder::TreeBuilder() : mRoot(std::make_unique<SizeNode>())
     mRoot->kind = NodeKind::Folder;
 }
 
-void TreeBuilder::addRoot(const QString& handle, const QString& name)
+void TreeBuilder::addRoot(const QString& handle, const QString& name, bool revealable)
 {
     SizeNode* node = mRoot->addFolder(name);
-    node->handle = handle;
+    if (revealable)
+    {
+        node->handle = handle;
+    }
     mFolders.insert(handle, node);
 }
 

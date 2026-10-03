@@ -45,7 +45,8 @@ void PluginAccountSource::readRoots()
         handles.append(handle);
     }
     const QJsonObject params{{QLatin1String("handles"), handles},
-                             {QLatin1String("fields"), QJsonArray{QLatin1String("name")}}};
+                             {QLatin1String("fields"),
+                              QJsonArray{QLatin1String("name"), QLatin1String("parent")}}};
     const int generation = mGeneration;
     mRpc.request(QStringLiteral("items.get"),
                  params,
@@ -62,8 +63,13 @@ void PluginAccountSource::readRoots()
                      const QJsonArray items = result[QLatin1String("items")].toArray();
                      for (const QJsonValue& item : items)
                      {
+                         // No parent: the Cloud Drive root, whose node name is not
+                         // what MEGA Explorer calls it.
+                         const bool isRoot = item[QLatin1String("parent")].isNull();
                          mBuilder.addRoot(item[QLatin1String("handle")].toString(),
-                                          item[QLatin1String("name")].toString());
+                                          isRoot ? tr("Cloud Drive")
+                                                 : item[QLatin1String("name")].toString(),
+                                          !isRoot);
                      }
                      readPage({});
                  });

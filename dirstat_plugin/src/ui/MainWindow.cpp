@@ -262,7 +262,7 @@ void MainWindow::onTreemapClicked(const SizeNode* node)
 void MainWindow::showContextMenu(const SizeNode* node, const QPoint& globalPos)
 {
     QMenu menu(this);
-    if (node && node->parent)
+    if (node && !node->handle.isEmpty())
     {
         menu.addAction(tr("Show “%1” in MEGA Explorer").arg(menuName(node->name)),
                        this,

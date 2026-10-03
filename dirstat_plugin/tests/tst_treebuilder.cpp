@@ -66,6 +66,17 @@ private slots:
         QCOMPARE(snapshot->root->size, 10);
     }
 
+    void unrevealableRootHasNoHandleButStillTakesChildren()
+    {
+        TreeBuilder builder;
+        builder.addRoot(QStringLiteral("R1"), QStringLiteral("Cloud Drive"), false);
+        QVERIFY(builder.addItem(file("A1", "R1", "a", 5, 0)));
+
+        const SnapshotPtr snapshot = builder.take();
+        QVERIFY(snapshot->root->children[0]->handle.isEmpty());
+        QCOMPARE(snapshot->root->children[0]->children[0]->handle, QStringLiteral("A1"));
+    }
+
     void itemWithUnknownParentIsDropped()
     {
         TreeBuilder builder;
