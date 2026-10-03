@@ -68,13 +68,29 @@ dirstat_add_test(tst_sizenode tests/tst_sizenode.cpp)
 dirstat_add_test(tst_treemaplayout tests/tst_treemaplayout.cpp)
 dirstat_add_test(tst_treebuilder tests/tst_treebuilder.cpp)
 
+# The exe end to end over stdio, as MEGA Explorer drives it; windowless.
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME protocol
+        COMMAND ${Python3_EXECUTABLE} -m unittest -v test_protocol
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    set_tests_properties(protocol PROPERTIES ENVIRONMENT_MODIFICATION
+        "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>;MEGADIRSTAT_PLUGIN_EXE=set:$<TARGET_FILE:MegaDirStatPlugin>;QT_QPA_PLATFORM=set:offscreen")
+endif()
+
 install(TARGETS MegaDirStatPlugin RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 qt_generate_deploy_app_script(
     TARGET MegaDirStatPlugin
     OUTPUT_SCRIPT DIRSTAT_DEPLOY_SCRIPT
     NO_TRANSLATIONS
     NO_COMPILER_RUNTIME
-    NO_UNSUPPORTED_PLATFORM_ERROR)
+    NO_UNSUPPORTED_PLATFORM_ERROR
+    # A raster Widgets window drawing PNG icons needs only the platforms and styles
+    # plugins; the rest (and the libraries they pull in) is two thirds of the size.
+    DEPLOY_TOOL_OPTIONS
+        --no-opengl-sw --no-system-d3d-compiler --no-system-dxc-compiler
+        --skip-plugin-types generic,iconengines,imageformats,networkinformation,tls
+        --no-network --no-pdf --no-svg)
 install(SCRIPT ${DIRSTAT_DEPLOY_SCRIPT})
 # windeployqt finds the MSVC redistributable only through %VCINSTALLDIR%, which
 # an ordinary shell does not set; this module uses the configured toolchain.
