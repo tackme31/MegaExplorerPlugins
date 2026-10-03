@@ -4,10 +4,10 @@ description: >-
   Cut a release of one plugin in this repository (dirstat or wdtagger): pick
   the next version from what changed in that plugin's folder since its last
   tag, write English release notes, bump plugin.json, build, pack the zip into
-  dist/, unpack it and check it runs, then tag. Nothing is pushed or uploaded --
-  publishing the zip is done by hand. `/release dirstat` or
-  `/release wdtagger 0.2.0`; with no plugin given it asks. Stops for approval
-  once, on the version and the notes. Use only when cutting a release.
+  dist/, unpack it and check it runs, tag, then push and publish the GitHub
+  release with gh. `/release dirstat` or `/release wdtagger 0.2.0`; with no
+  plugin given it asks. Stops for approval twice -- on the version and the
+  notes, and on the zip check before publishing. Use only when cutting a release.
 ---
 
 # /release — プラグインのリリースを 1 本切る
@@ -17,11 +17,13 @@ description: >-
 あるプラグインを並べて `AskUserQuestion` で聞く。**人間が対話的に走らせるコマンド**で、
 サブエージェントには出さない。
 
-止まるのは **版とリリース文の承認（2.）の 1 箇所だけ**。それ以外は失敗しない限り進む。
+止まるのはこの 2 箇所だけ。それ以外は失敗しない限り進む。
 
-**このスキルは何も push せず、何もアップロードしない。** このリポジトリは push しない決まりで
-（`CLAUDE.md`）、リリースは zip を人間が手で公開する。スキルの成果物は `dist/` の zip と
-リリース文、それにローカルのタグまで。本番のプラグインフォルダへのインストールもしない。
+1. **版とリリース文の承認（2.）** → その後に版上げコミット
+2. **zip の検証結果の承認（5.）** → その後にタグ、push、GitHub release の公開
+
+公開先は `origin`（GitHub）の Releases。承認②までは全部ローカルなので戻せる。本番の
+プラグインフォルダへのインストールはしない。
 
 | `<plugin>` | フォルダ | 表示名 | タグ | zip |
 | --- | --- | --- | --- | --- |
@@ -36,10 +38,14 @@ zip の中は `<plugin>/` 1 段で始める（`dirstat/plugin.json` …）。REA
 ```
 git rev-parse --abbrev-ref HEAD               # main であること
 git status --porcelain                        # 空であること
+git fetch origin --tags
+git log --oneline origin/main..main main..origin/main   # 乖離していないこと
 git describe --tags --abbrev=0 --match '<plugin>-v*'   # 前回のタグ（無ければ初回）
 git log --oneline <前回タグ>..HEAD -- <フォルダ>/        # 1 件以上であること（初回は不問）
 ```
 
+- `origin/main` が先行していたら `git pull --ff-only` で追いつく。乖離していたら中断。
+  `main` だけが先行しているのは構わない（6. で一緒に push される）。
 - 前回タグ以降、そのフォルダに変更が無ければ出すものが無いので終わる。
 - 変更が README・`docs/`・テストだけなら、それも出す理由にならない。そう言って、出すかを聞く。
 - テストを通す。落ちたらそこで中断:
@@ -72,12 +78,13 @@ git log <前回タグ>..HEAD --format='%h %s%n%b%n---' -- <フォルダ>/
 
 ```
 git tag -l <plugin>-vX.Y.Z               # 空であること
+gh release view <plugin>-vX.Y.Z          # 「release not found」であること
 ls dist/<zip 名>                         # 無いこと（あれば前回の残骸。消すか聞く）
 ```
 
-## 2. リリース文を書く（承認）
+## 2. リリース文を書く（承認①）
 
-**英語**、利用者視点。公開先のリリースページに出るもの。材料は 1. の `git log`。
+**英語**、利用者視点。GitHub のリリースページに出るもの。材料は 1. の `git log`。
 
 - 冒頭 1 行で「何のリリースか」。初回は機能を 2〜3 行で紹介する（README の冒頭が材料）。
 - 見出しは中身のあるものだけ: `### New features` / `### Improvements` / `### Bug fixes`。
@@ -159,7 +166,7 @@ New-Item -ItemType Directory -Force dist | Out-Null
 Compress-Archive -Path "$stage/dirstat" -DestinationPath "dist/MegaDirStat-$ver.zip"
 ```
 
-## 5. zip を展開して確かめる
+## 5. zip を展開して確かめる（承認②）
 
 確認対象は**展開した zip**。ビルド木や作業フォルダで代用しない。
 
@@ -196,41 +203,59 @@ Expand-Archive -LiteralPath <zip> -DestinationPath $dest
 落ちたら原因を直す。zip の作り方の問題なら 4. からやり直す。コードの問題なら、版上げ
 コミットを 8. の手順で戻してから直し、`/release` をやり直す。
 
-## 6. タグを打つ
+通ったら結果（zip のパスとサイズ、中身の一覧、各チェックの結果）を見せ、**`AskUserQuestion`
+で「公開して良い / 中止」** を聞く。中止なら 8. の戻し方へ。
 
-5. が通ってから。注釈付きで、HEAD（3. の版上げコミット、初回なら今の HEAD）に打つ。
+## 6. タグを打って公開する
+
+承認②が出てから、この順で。タグは注釈付きで、HEAD（3. の版上げコミット、初回なら今の
+HEAD）に打つ。
 
 ```
 git tag -a <plugin>-vX.Y.Z
+git push origin main
+git push origin <plugin>-vX.Y.Z
+gh release create <plugin>-vX.Y.Z --verify-tag --title "<表示名> X.Y.Z" \
+    --notes-file dist/release-notes-<plugin>-X.Y.Z.md <zip>
 ```
 
-注釈は「`MegaDirStat X.Y.Z`」（または `WD Tagger X.Y.Z`）＋空行＋リリース文の要約 2〜3 行
-＋ zip 名。英語。**push しない。**
+- タグの注釈は「`MegaDirStat X.Y.Z`」（または `WD Tagger X.Y.Z`）＋空行＋リリース文の要約
+  2〜3 行＋ zip 名。英語。
+- `--verify-tag` は、タグの push が落ちていたときに GitHub 側でタグを作らせないため。
+- **`--latest=false` を付けるかを考える。** 2 つのプラグインが同じリポジトリの Releases を
+  共有しているので、GitHub の「Latest」は最後に出したほうに付く。どちらか一方の古い版の
+  patch を後から出すときなど、Latest を奪うのが不自然なら付ける。通常の新版は付けない。
+- `--draft` / `--prerelease` は指示されたときだけ。
 
 ## 7. 後片付けと報告
 
 一時ディレクトリ（`plugin-release-*`）を消す。`dirstat_plugin/bin/` は残す——dev プロファイルの
 ジャンクションが今もそれを起動するので、消すとプラグインが動かなくなる。
 
-報告は数行: zip のパスとサイズ、リリース文のパス、タグ名、含まれるコミット数。最後に
-**人間がやること**を書く: リリースページで新しいリリースを作り、リリース文を本文に貼り、
-zip を添付する。本番フォルダへの入れ替えは頼まれたときだけ。
+報告は数行: リリース URL、zip 名とサイズ、タグ名、含まれるコミット数。本番フォルダへの
+入れ替えは頼まれたときだけ。
 
 ## 8. 途中で落ちたとき / 中止のとき
 
-全部ローカルなので戻せる。**戻す操作は破壊的なので、実行前に何をするか見せて確認を取る。**
+push より前は全部ローカルなので戻せる。**戻す操作は破壊的なので、実行前に何をするか見せて
+確認を取る。**
 
 ```
-git tag -d <plugin>-vX.Y.Z      # 6. まで進んでいたら
+git tag -d <plugin>-vX.Y.Z      # タグまで進んでいたら
 git reset --hard HEAD~1         # 3. の版上げコミットを捨てるとき（HEAD がそれであることを先に見る）
 ```
 
 `dist/` の zip とリリース文は消すか残すか聞く。
 
+push した後に問題が見つかったら、タグと release を消すのではなく**次の patch を切る**のが
+既定。どうしても消すなら `gh release delete` と `git push origin :refs/tags/<plugin>-vX.Y.Z`
+を、人間の明示的な指示のもとで。
+
 ## 禁止事項
 
-- **承認の前にコミットもタグもしない。** 5. が通る前にタグを打たない。
-- push しない、リリースページへ上げない、本番のプラグインフォルダを触らない。
+- **承認①の前にコミットしない**、**承認②の前にタグを打たず、何も push しない**。
+- `git push --force` を `main` に使わない。`--no-verify` でコミットしない。
+- 本番のプラグインフォルダを触らない。
 - `deploy.ps1 -Config Debug` の `bin/` を zip にしない。
 - 作業木を丸ごと zip にしない（コミット済みの中身 ＋ `bin/` だけ）。
 - リリースで依存の版を上げない（`uv.lock` の差分は自分の版 1 行だけ）。

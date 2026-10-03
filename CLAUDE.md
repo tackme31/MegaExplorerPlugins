@@ -18,8 +18,8 @@ and its own README (features, installation, building) and LICENSE. `README.md` h
 | `dirstat_plugin/` | MegaDirStat: size tree + treemap of a folder, in its own window. Read-only. | C++20 / Qt 6 Widgets |
 | `wdtagger_plugin/` | WD Tagger: tags images/videos with a WD14 model on the GPU, as MEGA tags | Python / uv |
 
-Branch `main` only, **never pushed** unless the user asks. Releases are zips of a plugin folder,
-published by hand.
+Branch `main` only, pushed to `origin` (GitHub); pushing it is fine. Releases are zips of one
+plugin folder, published as GitHub releases by `/release` (`.claude/skills/release/`).
 
 ## The plugin API
 
