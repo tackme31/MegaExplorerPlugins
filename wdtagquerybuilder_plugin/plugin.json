@@ -3,7 +3,7 @@
   "id": "com.takumi.wdtagquerybuilder",
   "name": "WD Tag Query Builder",
   "version": "0.1.0",
-  "description": "Builds a tag: query for the search box over WD Tagger's tags, with suggestions from the tags on your files.",
+  "description": "Builds a tag: query over WD Tagger's tags, with suggestions from the tags on your files, and runs it in the current tab.",
   "apiVersion": 1,
   "run": { "command": "uv", "args": ["run", "--quiet", "main.py"] },
   "permissions": ["items.read"],

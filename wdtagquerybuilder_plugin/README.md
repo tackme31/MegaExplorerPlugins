@@ -2,8 +2,8 @@
 
 A MEGA Explorer plugin that helps you write a `tag:` query for the search box over the tags
 [WD Tagger](../wdtagger_plugin/README.md) stores. It suggests tags from the ones already on your
-files, shows how many files the query matches as you build it, and copies the finished query to
-the clipboard for you to paste into MEGA Explorer's search box.
+files, shows how many files the query matches as you build it, and runs the finished query in
+MEGA Explorer's search.
 
 **It is built for WD Tagger's tags.** It knows how WD Tagger stores them — several words packed
 into one `wd:` or `chara:` tag, and a `rating:` tag — and splits and offers them accordingly, so tag
@@ -24,8 +24,10 @@ or the empty space of a folder): **Open builder...** It opens a window of its ow
   with its file count. MEGA Explorer's search has no OR, so only one rating can be picked.
 - **Live match count.** The number of files the query matches in the Cloud Drive, counted with
   the same rule as MEGA Explorer's search.
-- **Copy** puts the query on the clipboard, e.g. `tag:1girl tag:solo tag:rating:general`. The
-  query field is editable, so you can adjust it before copying.
+- **Search** runs the query, e.g. `tag:1girl tag:solo tag:rating:general`, in MEGA Explorer's
+  current tab, as if you had typed it into the search box. It replaces that tab's search, so the
+  search filters (type, category and so on) go back to none. The query field is editable, so you
+  can adjust it before searching.
 
 Keys in the tag field:
 
@@ -46,13 +48,15 @@ found in some tag of the item. So `tag:solo` also finds `solo_focus`, and `tag:g
 The count includes those matches too, so it agrees with the search, with these differences:
 
 - It counts the **whole Cloud Drive**. The search looks in the folder you have open and its
-  subfolders, so pasting the query anywhere but the root can find fewer files.
+  subfolders, so searching anywhere but the root can find fewer files.
 - It counts **files only**. The search also lists folders that carry the tags.
 - It is the count **when the window opened**. Tags added while it is open are not counted; open it
   again to recount.
 
 ## Requirements
 
+- **MEGA Explorer newer than 0.4.1**: Search uses the `ui.search` plugin method, which older
+  versions lack.
 - [**uv**](https://docs.astral.sh/uv/) on `PATH`. It provides Python; the plugin has no other
   dependencies (the window is tkinter, which comes with Python).
 - **Files tagged by [WD Tagger](../wdtagger_plugin/README.md)** — the plugin is meant to be used

@@ -1,6 +1,7 @@
 """WD Tag Query Builder: build a `tag:` query over WD Tagger's tags, with suggestions
 drawn from the tags already on the account's files and a live count of what it
-would match. The window; the index and the query rules are in tagquery.py.
+would match, and run it in the app's current tab. The window; the index and the
+query rules are in tagquery.py.
 """
 
 import queue
@@ -77,7 +78,7 @@ class Builder:
 
         buttons = ttk.Frame(frame)
         buttons.pack(fill="x")
-        ttk.Button(buttons, text="Copy", command=self.copy).pack(side="right")
+        ttk.Button(buttons, text="Search", command=self.search).pack(side="right")
         ttk.Button(buttons, text="Clear", command=self.clear).pack(side="left")
 
         self.refresh()
@@ -215,12 +216,15 @@ class Builder:
         if self.suggestion_keys and self.entry.get().strip():
             self.suggestions.selection_set(0)
 
-    # --- handing the query to the user -----------------------------------------
+    # --- running the query in the app ------------------------------------------
 
-    def copy(self):
-        self.root.clipboard_clear()
-        self.root.clipboard_append(self.query.get().strip())
-        self.status.config(text="Copied: paste it into the app's search box")
+    def search(self):
+        try:
+            self.ctx.search(self.query.get().strip())
+        except RpcError as e:
+            self.status.config(text=f"Could not search: {e.message}")
+            return
+        self.status.config(text="Searched in MEGA Explorer's current tab")
 
     def close(self):
         self.closing.set()
