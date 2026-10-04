@@ -1,0 +1,9 @@
+[project]
+name = "dupfinder-plugin"
+version = "0.1.0"
+description = "MegaExplorer plugin: find duplicate files by MEGA's content checksum"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false

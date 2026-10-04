@@ -18,6 +18,7 @@ and its own README (features, installation, building) and LICENSE. `README.md` h
 | `dirstat_plugin/` | MegaDirStat: size tree + treemap of a folder, in its own window. Read-only. | C++20 / Qt 6 Widgets |
 | `wdtagger_plugin/` | WD Tagger: tags images/videos with a WD14 model on the GPU, as MEGA tags | Python / uv |
 | `wdtagsearch_plugin/` | WD Tag Search: builds a `tag:` query over WD Tagger's tags, with suggestions and a match count, and runs it in the app. Read-only. | Python / uv |
+| `dupfinder_plugin/` | Duplicate Finder: groups the files under a folder by size and MEGA's content checksum (`crc`) and lists the duplicates. Read-only. | Python / uv |
 
 Branch `main` only, pushed to `origin` (GitHub); pushing it is fine. Releases are zips of one
 plugin folder, published as GitHub releases by `/release` (`.claude/skills/release/`).
@@ -112,6 +113,17 @@ uv run python -m unittest
   suggestions, match count, query text), `main.py` the window and the counting thread.
 - The match count must follow MEGA Explorer's search rule exactly; `docs/SPEC.md` (Japanese) says
   which rule and why each deviation was closed. Read it before changing behaviour.
+
+## dupfinder_plugin (Python / uv)
+
+```
+uv run python -m unittest
+```
+
+- No dependencies beyond Python; the window is tkinter. `duplicates.py` is the testable part
+  (grouping by `size` + `crc`), `main.py` the window and the listing thread.
+- Reads only `items.descendants` with `fields`, so it never reaches MEGA. Needs MEGA Explorer's
+  `crc` item field (an older app answers `-32602` for the unknown field).
 
 ## Writing docs and commits
 
