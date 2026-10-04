@@ -8,6 +8,6 @@
   "run": { "command": "uv", "args": ["run", "--quiet", "main.py"] },
   "permissions": ["items.read"],
   "commands": [
-    { "id": "find", "title": "Find duplicates...", "when": { "targets": "folders" } }
+    { "id": "find", "title": "Find duplicates...", "progress": "never", "when": { "targets": "folders" } }
   ]
 }

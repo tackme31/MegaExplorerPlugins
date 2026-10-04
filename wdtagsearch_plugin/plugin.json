@@ -8,6 +8,6 @@
   "run": { "command": "uv", "args": ["run", "--quiet", "main.py"] },
   "permissions": ["items.read"],
   "commands": [
-    { "id": "open", "title": "Open builder..." }
+    { "id": "open", "title": "Open builder...", "progress": "never" }
   ]
 }
