@@ -3,6 +3,7 @@
   "id": "com.takumi.wdtagger",
   "name": "WD Tagger",
   "version": "0.1.0",
+  "description": "Tags images and videos with what is in them, using a WD14 tagger model on the GPU, as MEGA tags you can search for.",
   "apiVersion": 1,
   "run": { "command": "uv", "args": ["run", "--quiet", "main.py"] },
   "permissions": ["items.read", "items.edit", "content.read"],
