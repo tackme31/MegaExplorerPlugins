@@ -1,11 +1,11 @@
 import unittest
 
-from duplicates import DuplicateFinder
+from duplicates import DuplicateFinder, Group, format_size, parent_path
 from megaexplorer_plugin import Item
 
 
 def item(handle, path, size, crc):
-    return Item({"handle": handle, "path": path, "size": size, "crc": crc})
+    return Item({"handle": handle, "name": path.rsplit("/", 1)[1], "path": path, "size": size, "crc": crc})
 
 
 class DuplicateFinderTest(unittest.TestCase):
@@ -45,6 +45,30 @@ class DuplicateFinderTest(unittest.TestCase):
         finder = self.find(item("a", "/a", 10, "S"), item("a", "/a", 10, "S"))
         self.assertEqual(finder.groups(), [])
         self.assertEqual(finder.files, 1)
+
+
+class GroupTitleTest(unittest.TestCase):
+    def test_one_name_is_the_title(self):
+        group = Group(1, [item("a", "/x/a.jpg", 1, "C"), item("b", "/y/a.jpg", 1, "C")])
+        self.assertEqual(group.title, "a.jpg")
+
+    def test_other_names_are_counted(self):
+        group = Group(1, [item("a", "/a.jpg", 1, "C"), item("b", "/b.jpg", 1, "C"),
+                          item("c", "/c.jpg", 1, "C"), item("d", "/z/a.jpg", 1, "C")])
+        self.assertEqual(group.title, "a.jpg (+2 other names)")
+
+
+class FormattingTest(unittest.TestCase):
+    def test_parent_path(self):
+        self.assertEqual(parent_path("/Photos/2024/a.jpg"), "/Photos/2024")
+        self.assertEqual(parent_path("/a.jpg"), "/")
+
+    def test_format_size(self):
+        self.assertEqual(format_size(0), "0 B")
+        self.assertEqual(format_size(1023), "1023 B")
+        self.assertEqual(format_size(1536), "1.5 KB")
+        self.assertEqual(format_size(3 * 1024 ** 3), "3.0 GB")
+        self.assertEqual(format_size(2048 * 1024 ** 4), "2048.0 TB")
 
 
 if __name__ == "__main__":

@@ -124,6 +124,8 @@ uv run python -m unittest
   (grouping by `size` + `crc`), `main.py` the window and the listing thread.
 - Reads only `items.descendants` with `fields`, so it never reaches MEGA. Needs MEGA Explorer's
   `crc` item field (an older app answers `-32602` for the unknown field).
+- Read-only by decision: copies are dealt with in the app after **Go to file** (`ui.reveal`).
+  `docs/SPEC.md` (Japanese) records this and the other decisions; read it before changing behaviour.
 
 ## Writing docs and commits
 
