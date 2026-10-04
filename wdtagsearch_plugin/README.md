@@ -1,4 +1,4 @@
-# WD Tag Query Builder for MEGA Explorer
+# WD Tag Search for MEGA Explorer
 
 A MEGA Explorer plugin that helps you write a `tag:` query for the search box over the tags
 [WD Tagger](../wdtagger_plugin/README.md) stores. It suggests tags from the ones already on your
@@ -12,7 +12,7 @@ stored, and the rating drop-down finds nothing without WD Tagger's `rating:` tag
 
 ## Features
 
-One command in the **WD Tag Query Builder** submenu of the right-click menu (on a file, a folder,
+One command in the **WD Tag Search** submenu of the right-click menu (on a file, a folder,
 or the empty space of a folder): **Open builder...** It opens a window of its own.
 
 - **Suggestions from your own tags.** When the window opens, the plugin reads the tags on every
@@ -67,7 +67,7 @@ The count includes those matches too, so it agrees with the search, with these d
 1. Download the plugin's zip from the Releases page and unpack it into a folder of its own inside
    MEGA Explorer's plugins folder, so that `plugin.json` sits directly in that folder:
    ```
-   %LOCALAPPDATA%\MegaExplorer\MegaExplorer\plugins\wdtagquerybuilder\plugin.json
+   %LOCALAPPDATA%\MegaExplorer\MegaExplorer\plugins\wdtagsearch\plugin.json
    ```
 2. Run `uv sync` once in that folder, so that fetching Python does not happen during the first run.
 3. Restart MEGA Explorer. **Settings › Plugins** lists it once it has loaded.
@@ -85,7 +85,7 @@ build (the `dev` profile) instead of copying it; a change to the Python files th
 next run, a change to `plugin.json` after restarting the app:
 
 ```
-mklink /J "%LOCALAPPDATA%\MegaExplorer\MegaExplorer-dev\plugins\wdtagquerybuilder" <this folder>
+mklink /J "%LOCALAPPDATA%\MegaExplorer\MegaExplorer-dev\plugins\wdtagsearch" <this folder>
 ```
 
 `megaexplorer_plugin.py` is a copy of the Python helper that ships with MEGA Explorer's sample

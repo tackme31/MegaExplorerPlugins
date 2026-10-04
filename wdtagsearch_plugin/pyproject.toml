@@ -1,5 +1,5 @@
 [project]
-name = "wdtagquerybuilder-plugin"
+name = "wdtagsearch-plugin"
 version = "0.1.0"
 description = "MegaExplorer plugin: build a tag query over WD Tagger tags"
 requires-python = ">=3.12"

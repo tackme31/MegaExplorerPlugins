@@ -1,12 +1,13 @@
-# WD Tag Query Builder — 仕様と決定事項
+# WD Tag Search — 仕様と決定事項
 
 **状態: 0.1.0（PoC から正式版へ。ロジックを `tagquery.py` に分けて単体テストを付け、Copy ボタンを本体の `ui.search` を呼ぶ Search ボタンに置き換えた）。** WD Tagger（`wdtagger_plugin`）のタグを対象に、アプリの検索欄に入れる `tag:` クエリを、アカウントに実際に付いているタグからの
 サジェストと、ヒット件数の即時表示を見ながら組み立て、Search ボタンで **アプリの表示中のタブで検索させる**
 （本体の `ui.search`、§6）。
 
 当初は汎用のタグ検索を考えていたが、`wd:` / `chara:` / `rating:` の扱いが WD Tagger の保存形式に依存するので
-WD Tagger 専用とした。主役はクエリ作りなので、名前は WD Tag Query Builder
-（`wdtagquerybuilder_plugin`、`com.takumi.wdtagquerybuilder`）。
+WD Tagger 専用とした。名前は WD Tag Search（`wdtagsearch_plugin`、`com.takumi.wdtagsearch`）。
+検索の実行をやめてクエリ作りに絞った時期は WD Tag Query Builder と呼んでいたが、本体の `ui.search` で検索を
+実行するようになった（§6）ので、検索の道具としての名前に戻した。
 
 ## 1. 前提: アプリの検索の仕様（MEGA Explorer 本体）
 

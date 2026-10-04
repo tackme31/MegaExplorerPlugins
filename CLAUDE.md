@@ -17,7 +17,7 @@ and its own README (features, installation, building) and LICENSE. `README.md` h
 | --- | --- | --- |
 | `dirstat_plugin/` | MegaDirStat: size tree + treemap of a folder, in its own window. Read-only. | C++20 / Qt 6 Widgets |
 | `wdtagger_plugin/` | WD Tagger: tags images/videos with a WD14 model on the GPU, as MEGA tags | Python / uv |
-| `wdtagquerybuilder_plugin/` | WD Tag Query Builder: builds a `tag:` query over WD Tagger's tags, with suggestions and a match count. Read-only. | Python / uv |
+| `wdtagsearch_plugin/` | WD Tag Search: builds a `tag:` query over WD Tagger's tags, with suggestions and a match count, and runs it in the app. Read-only. | Python / uv |
 
 Branch `main` only, pushed to `origin` (GitHub); pushing it is fine. Releases are zips of one
 plugin folder, published as GitHub releases by `/release` (`.claude/skills/release/`).
@@ -101,7 +101,7 @@ uv run python -m unittest
 - `docs/SPEC.md` (Japanese) holds the design decisions and measurements. Read it before changing
   behaviour, and record a new decision there.
 
-## wdtagquerybuilder_plugin (Python / uv)
+## wdtagsearch_plugin (Python / uv)
 
 ```
 uv sync

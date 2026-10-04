@@ -1,4 +1,4 @@
-"""WD Tag Query Builder: build a `tag:` query over WD Tagger's tags, with suggestions
+"""WD Tag Search: build a `tag:` query over WD Tagger's tags, with suggestions
 drawn from the tags already on the account's files and a live count of what it
 would match, and run it in the app's current tab. The window; the index and the
 query rules are in tagquery.py.
@@ -33,7 +33,7 @@ class Builder:
         self.drive_root = find_root(ctx)
 
         self.root = tk.Tk()
-        self.root.title("WD Tag Query Builder")
+        self.root.title("WD Tag Search")
         self.root.geometry("560x620")
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
