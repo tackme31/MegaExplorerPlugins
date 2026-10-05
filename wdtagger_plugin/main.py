@@ -1,17 +1,22 @@
 """WD Tagger plugin for MegaExplorer (docs/SPEC.md)."""
 
 import sys
+import time
+from contextlib import closing
 from pathlib import Path
 
 import onnxruntime as ort
 
 import model
 from megaexplorer_plugin import CommandError, NoPreview, Plugin, RpcError
+from pipeline import pipeline
 from single_run import one_at_a_time
 from tags import build_tags, has_been_tagged, is_plugin_tag, is_taggable, load_config
 
 plugin = Plugin()
 CONFIG_PATH = Path(__file__).with_name("config.json")
+# Previews being fetched, and tag updates being sent, at once: docs/SPEC.md §1.
+WORKERS = 4
 
 
 NO_FILES = "Nothing to tag: no images or videos selected"
@@ -93,41 +98,78 @@ def _tag(ctx, candidates, retag):
     if not todo:
         return f"Nothing to tag: {already} already tagged"
 
+    started = time.perf_counter()
     tag_model = _load_model(ctx, config)
+    timing = _Timing()
+    timing.log(f"model load {time.perf_counter() - started:.2f}s, {len(todo)} to tag, "
+               f"{WORKERS} workers")
     tagged = unchanged = 0
     failed = []      # "<path>: <why>"
     no_preview = []  # paths
-    for n, item in enumerate(todo):
-        ctx.check_cancelled()
-        ctx.progress(n, len(todo), "Tagging…")
+
+    # fetch and store run on worker threads: they only call the app and report
+    # problems as values, so every list above is touched on this thread alone.
+    def fetch(item):
+        start = time.perf_counter()
         try:
-            preview = ctx.fetch_preview(item)
+            return ctx.fetch_preview(item), None, time.perf_counter() - start
         except NoPreview:
-            no_preview.append(item.path)
-            continue
+            return None, None, 0.0
         except RpcError as error:
-            failed.append(f"{item.path}: preview failed: {error}")
-            continue
+            return None, f"preview failed: {error}", 0.0
+
+    def compute(item, fetched):
+        preview, problem, fetch_time = fetched
+        if preview is None:
+            if problem:
+                failed.append(f"{item.path}: {problem}")
+            else:
+                no_preview.append(item.path)
+            return None
+        start = time.perf_counter()
         try:
             probs = tag_model.predict(preview)
         finally:
             preview.unlink(missing_ok=True)
+        predict_time = time.perf_counter() - start
         tags = build_tags(probs, tag_model.names, tag_model.categories, config, item.tags)
         if not tags:
             failed.append(f"{item.path}: no room for tags next to {item.tags}")
-            continue
+            return None
         old = [t for t in item.tags if is_plugin_tag(t)]
+        return tags, old, fetch_time, predict_time
+
+    def store(item, job):
+        tags, old = job[:2]
+        start = time.perf_counter()
         try:
-            after = ctx.update(item, tags_add=tags, tags_remove=old)
+            return ctx.update(item, tags_add=tags, tags_remove=old), None, \
+                time.perf_counter() - start, job
         except RpcError as error:
-            failed.append(f"{item.path}: update failed: {error}")
-            continue
-        if set(after.tags) == set(item.tags):
-            unchanged += 1
-        else:
-            print(f"{item.name}: {tags}", file=sys.stderr)
-            tagged += 1
-    ctx.progress(len(todo), len(todo), "Tagging…")
+            return None, f"update failed: {error}", 0.0, job
+
+    ctx.progress(0, len(todo), "Tagging…")
+    timing.start()
+    try:
+        with closing(pipeline(todo, fetch, compute, store, WORKERS)) as results:
+            for done, (item, stored) in enumerate(results, 1):
+                if stored is not None:
+                    after, problem, update_time, (tags, _, fetch_time, predict_time) = stored
+                    if after is None:
+                        failed.append(f"{item.path}: {problem}")
+                    else:
+                        # The app sends MEGA one request per tag that changes.
+                        writes = len(set(item.tags) ^ set(after.tags))
+                        timing.add(fetch_time, predict_time, update_time, writes)
+                        if set(after.tags) == set(item.tags):
+                            unchanged += 1
+                        else:
+                            print(f"{item.name}: {tags}", file=sys.stderr)
+                            tagged += 1
+                ctx.check_cancelled()
+                ctx.progress(done, len(todo), "Tagging…")
+    finally:
+        timing.summary()
 
     parts = [f"{'Retagged' if retag else 'Tagged'} {tagged}"]
     if unchanged:
@@ -143,6 +185,45 @@ def _tag(ctx, candidates, retag):
         if entries:
             lines += ["", heading] + [f"  {entry}" for entry in entries]
     return "\n".join(lines)
+
+
+class _Timing:
+    """Average per-stage times on stderr (the app's log) every SUMMARY_EVERY items
+    and at the end, to notice MEGA slowing down or throttling during a long run.
+    The stages overlap, so the throughput is the wall clock over the items, not their sum."""
+
+    SUMMARY_EVERY = 50
+
+    def __init__(self):
+        self.count = self.writes = self.logged = 0
+        self.fetch = self.predict = self.update = 0.0
+        self.started = time.perf_counter()
+
+    def start(self):
+        self.started = time.perf_counter()
+
+    @staticmethod
+    def log(text):
+        print(f"timing: {text}", file=sys.stderr)
+
+    def add(self, fetch, predict, update, writes):
+        self.count += 1
+        self.writes += writes
+        self.fetch += fetch
+        self.predict += predict
+        self.update += update
+        if self.count % self.SUMMARY_EVERY == 0:
+            self.summary()
+
+    def summary(self):
+        if self.count == self.logged:
+            return
+        self.logged = n = self.count
+        elapsed = time.perf_counter() - self.started
+        per_write = self.update / self.writes if self.writes else 0.0
+        self.log(f"avg of {n}: fetch={self.fetch / n:.3f} predict={self.predict / n:.3f} "
+                 f"update={self.update / n:.3f} ({self.writes / n:.1f} writes, "
+                 f"{per_write:.3f}s/write), wall {elapsed:.1f}s = {elapsed / n:.3f}s/item")
 
 
 def _load_model(ctx, config):
