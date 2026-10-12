@@ -5,8 +5,9 @@ import tempfile
 import unittest
 import zipfile
 
-from zipindex import (BLOCK, READ_LIMIT, RemoteFile, display_name, extract, filter_terms, format_size,
-                      list_entries, matches, safe_file_name, unique_path)
+from zipindex import (BLOCK, READ_LIMIT, RemoteFile, clean_tags, display_name, extract, filter_terms,
+                      format_size, list_entries, matches, safe_file_name, tag_changes, tag_filter_terms,
+                      tags_match, unique_path)
 
 
 def make_zip(files, compression=zipfile.ZIP_DEFLATED, comment=b""):
@@ -182,6 +183,29 @@ class HelpersTest(unittest.TestCase):
     def test_format_size(self):
         self.assertEqual(format_size(512), "512 B")
         self.assertEqual(format_size(1536), "1.5 KB")
+
+
+class TagsTest(unittest.TestCase):
+    def test_filter(self):
+        terms = tag_filter_terms(" Photo , 2024 ,, ")
+        self.assertEqual(terms, ["photo", "2024"])
+        self.assertTrue(tags_match(["photos", "trip 2024"], terms))
+        self.assertFalse(tags_match(["photos"], terms))
+        self.assertTrue(tags_match([], []))
+        self.assertFalse(tags_match([], ["x"]))
+
+    def test_clean(self):
+        self.assertEqual(clean_tags([" a ", "", "B", "b", "a b"]), ["a", "B", "a b"])
+        with self.assertRaises(ValueError):
+            clean_tags(["a,b"])
+        with self.assertRaises(ValueError):
+            clean_tags([str(i) for i in range(11)])
+        with self.assertRaises(ValueError):
+            clean_tags(["x" * 1600, "y" * 1600])
+
+    def test_changes(self):
+        self.assertEqual(tag_changes(["a", "B", "c"], ["b", "c", "d"]), (["d"], ["a"]))
+        self.assertEqual(tag_changes([], ["x"]), (["x"], []))
 
 
 if __name__ == "__main__":

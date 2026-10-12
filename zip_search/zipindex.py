@@ -250,3 +250,46 @@ def format_size(size):
         size /= 1024
         if size < 1024 or unit == "TB":
             return f"{size:,.1f} {unit}"
+
+
+MAX_TAGS = 10
+MAX_TAG_BYTES = 3000
+
+
+def tag_filter_terms(text):
+    """The ZIP-tag filter: tags separated by commas, each matched as part of a tag."""
+    return [term.strip().casefold() for term in text.split(",") if term.strip()]
+
+
+def tags_match(tags, terms):
+    """True when every term occurs in at least one of tags, ignoring case."""
+    folded = [tag.casefold() for tag in tags]
+    return all(any(term in tag for tag in folded) for term in terms)
+
+
+def clean_tags(values):
+    """The tags typed into the editor, trimmed, without blanks or repeats (MEGA
+    compares tags ignoring case). Raises ValueError for what MEGA would refuse."""
+    tags, seen = [], set()
+    for value in values:
+        tag = value.strip()
+        if not tag or tag.casefold() in seen:
+            continue
+        if "," in tag:
+            raise ValueError(f"A tag cannot contain a comma: {tag}")
+        seen.add(tag.casefold())
+        tags.append(tag)
+    if len(tags) > MAX_TAGS:
+        raise ValueError(f"At most {MAX_TAGS} tags")
+    if len(",".join(tags).encode("utf-8")) > MAX_TAG_BYTES:
+        raise ValueError(f"All tags together must fit in {MAX_TAG_BYTES} bytes")
+    return tags
+
+
+def tag_changes(old, new):
+    """(add, remove) that turn old into new. A change of case only is no change,
+    as MEGA matches tags ignoring case."""
+    old_folded = {tag.casefold() for tag in old}
+    new_folded = {tag.casefold() for tag in new}
+    return ([tag for tag in new if tag.casefold() not in old_folded],
+            [tag for tag in old if tag.casefold() not in new_folded])

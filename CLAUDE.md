@@ -142,6 +142,8 @@ uv run python -m unittest
   try it on a few small ZIPs.
 - Entry names without the UTF-8 flag are tried as UTF-8, then CP932, then left as CP437 — only
   for display: `zipfile` needs the original name to open the entry.
+- Edits the ZIP's own MEGA tags (`items.update`, permission `items.edit`); only the difference is
+  sent, so a change of case alone is no change (MEGA matches tags ignoring case).
 - The folder name has no `_plugin` suffix because the user named it so.
 
 ## Writing docs and commits
