@@ -293,3 +293,19 @@ def tag_changes(old, new):
     new_folded = {tag.casefold() for tag in new}
     return ([tag for tag in new if tag.casefold() not in old_folded],
             [tag for tag in old if tag.casefold() not in new_folded])
+
+
+def parse_extensions(text):
+    """The extensions box, "zip, .cbz, *.EPUB", as [".zip", ".cbz", ".epub"]."""
+    extensions = []
+    for part in text.split(","):
+        ext = part.strip().lstrip("*").lstrip(".").strip().casefold()
+        if ext and f".{ext}" not in extensions:
+            extensions.append(f".{ext}")
+    if not extensions:
+        raise ValueError("Enter at least one extension")
+    return extensions
+
+
+def has_extension(name, extensions):
+    return name.casefold().endswith(tuple(extensions))

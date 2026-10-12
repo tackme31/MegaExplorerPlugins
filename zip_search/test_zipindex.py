@@ -6,8 +6,8 @@ import unittest
 import zipfile
 
 from zipindex import (BLOCK, READ_LIMIT, RemoteFile, clean_tags, display_name, extract, filter_terms,
-                      format_size, list_entries, matches, safe_file_name, tag_changes, tag_filter_terms,
-                      tags_match, unique_path)
+                      format_size, has_extension, list_entries, matches, parse_extensions, safe_file_name,
+                      tag_changes, tag_filter_terms, tags_match, unique_path)
 
 
 def make_zip(files, compression=zipfile.ZIP_DEFLATED, comment=b""):
@@ -183,6 +183,19 @@ class HelpersTest(unittest.TestCase):
     def test_format_size(self):
         self.assertEqual(format_size(512), "512 B")
         self.assertEqual(format_size(1536), "1.5 KB")
+
+
+class ExtensionsTest(unittest.TestCase):
+    def test_parse(self):
+        self.assertEqual(parse_extensions(" zip, .CBZ ,*.epub,, zip"), [".zip", ".cbz", ".epub"])
+        with self.assertRaises(ValueError):
+            parse_extensions(" , . ")
+
+    def test_match(self):
+        extensions = parse_extensions("zip, cbz")
+        self.assertTrue(has_extension("Comic.CBZ", extensions))
+        self.assertFalse(has_extension("notzip", extensions))
+        self.assertFalse(has_extension("a.zip.txt", extensions))
 
 
 class TagsTest(unittest.TestCase):

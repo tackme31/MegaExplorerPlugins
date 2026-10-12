@@ -14,12 +14,14 @@ from tkinter import font as tkfont
 from tkinter import ttk
 
 from megaexplorer_plugin import Cancelled, Plugin, RpcError
-from zipindex import (MAX_TAGS, RemoteFile, clean_tags, extract, filter_terms, format_size, list_entries,
-                      matches, safe_file_name, tag_changes, tag_filter_terms, tags_match, unique_path)
+from zipindex import (MAX_TAGS, RemoteFile, clean_tags, extract, filter_terms, format_size, has_extension,
+                      list_entries, matches, parse_extensions, safe_file_name, tag_changes, tag_filter_terms,
+                      tags_match, unique_path)
 
 plugin = Plugin()
 
 ZIP_FIELDS = ["name", "size", "path", "tags"]
+DEFAULT_EXTENSIONS = "zip"
 FILTER_DELAY_MS = 250
 
 
@@ -66,6 +68,7 @@ class Window:
         self.zips_done = 0
         self.zips_total = None
         self.failed = []
+        self.generation = 0        # bumped per search; updates of an earlier one are dropped
         self.downloads = queue.Queue()
         self.downloading = threading.Event()
 
@@ -80,12 +83,13 @@ class Window:
 
         frame = ttk.Frame(self.root, padding=self.px(12))
         frame.pack(fill="both", expand=True)
+        self.build_search(frame)
         self.build_summary(frame)
         self.build_status(frame)
         self.build_table(frame)
         self.build_menu()
 
-        threading.Thread(target=self.scan, daemon=True).start()
+        self.start_search()
         self.saver = threading.Thread(target=self.download_worker, daemon=True)
         self.saver.start()
         self.root.after(100, self.poll)
@@ -108,17 +112,26 @@ class Window:
 
     # --- layout -----------------------------------------------------------------------
 
+    def build_search(self, parent):
+        bar = ttk.Frame(parent)
+        bar.pack(fill="x", pady=(0, self.px(10)))
+        ttk.Label(bar, text="Extensions (comma-separated):").pack(side="left")
+        self.extensions_text = tk.StringVar(value=DEFAULT_EXTENSIONS)
+        self.extensions_entry = ttk.Entry(bar, textvariable=self.extensions_text, width=40)
+        self.extensions_entry.pack(side="left", padx=(self.px(6), 0))
+        self.extensions_entry.bind("<Return>", lambda e: self.start_search())
+        self.search_button = ttk.Button(bar, text="Search", command=self.start_search)
+        self.search_button.pack(side="left", padx=(self.px(6), 0))
+
     def build_summary(self, parent):
         summary = ttk.Frame(parent)
         summary.pack(fill="x")
-        self.total = ttk.Label(summary, text="Looking for ZIP files...", font=self.headline)
+        self.total = ttk.Label(summary, text="", font=self.headline)
         self.total.pack(anchor="w")
-        self.detail = ttk.Label(summary, text=f"Listing the files in {self.scope()}")
+        self.detail = ttk.Label(summary, text="")
         self.detail.pack(anchor="w", pady=(self.px(2), 0))
         self.note = ttk.Label(summary, text="", foreground="gray40")
         self.progress = ttk.Progressbar(summary, mode="indeterminate")
-        self.progress.pack(fill="x", pady=(self.px(8), 0))
-        self.progress.start(15)
 
         bar = ttk.Frame(parent)
         bar.pack(fill="x", pady=(self.px(10), 0))
@@ -178,22 +191,53 @@ class Window:
 
     # --- reading the ZIPs, off the UI thread ------------------------------------------
 
-    def scan(self):
+    def start_search(self):
+        try:
+            extensions = parse_extensions(self.extensions_text.get())
+        except ValueError as e:
+            self.status.config(text=str(e))
+            return
+        self.extensions_text.set(", ".join(ext[1:] for ext in extensions))
+        self.generation += 1
+        self.extensions = extensions
+        self.rows = []
+        self.zips_done = 0
+        self.zips_total = None
+        self.failed = []
+        self.tree.delete(*self.tree.get_children(""))
+        self.update_shown()
+        self.note.pack_forget()
+        self.search_button.config(state="disabled")
+        self.extensions_entry.config(state="disabled")
+        self.total.config(text=f"Looking for {self.kinds()} files...")
+        self.detail.config(text=f"Listing the files in {self.scope()}")
+        self.progress.config(mode="indeterminate", value=0)
+        self.progress.pack(fill="x", pady=(self.px(8), 0))
+        self.progress.start(15)
+        threading.Thread(target=self.scan, args=(self.generation, extensions), daemon=True).start()
+
+    def kinds(self):
+        return ", ".join(ext[1:] for ext in self.extensions)
+
+    def scan(self, generation, extensions):
+        def put(kind, value):
+            self.updates.put((kind, value, generation))
+
         try:
             zips, seen = [], set()
             for folder in self.folders:
                 for item in self.ctx.descendants(folder, type="file", fields=ZIP_FIELDS):
                     if self.closing.is_set():
                         return
-                    if item.name.lower().endswith(".zip") and item.handle not in seen:
+                    if has_extension(item.name, extensions) and item.handle not in seen:
                         seen.add(item.handle)
                         zips.append(item)
             zips.sort(key=lambda z: z.path.casefold())
-            self.updates.put(("zips", len(zips)))
+            put("zips", len(zips))
             for item in zips:
                 if self.closing.is_set():
                     return
-                self.updates.put(("reading", item))
+                put("reading", item)
                 try:
                     with self.remote(item) as remote:
                         entries = list_entries(remote)
@@ -202,15 +246,18 @@ class Window:
                 except RpcError as e:
                     if e.code == 0:      # the app closed the connection
                         return
-                    self.updates.put(("failed", (item, e.message)))
+                    put("failed", (item, e.message))
                     continue
-                except Exception as e:  # a damaged or unsupported ZIP must not end the scan
-                    self.updates.put(("failed", (item, f"{type(e).__name__}: {e}")))
+                except Exception as e:  # a damaged or non-ZIP archive must not end the scan
+                    put("failed", (item, f"{type(e).__name__}: {e}"))
                     continue
-                self.updates.put(("zip", (item, entries)))
-            self.updates.put(("done", None))
+                put("zip", (item, entries))
+            put("done", None)
         except RpcError as e:
-            self.updates.put(("error", e.message))
+            put("error", e.message)
+
+    def notify(self, kind, value):
+        self.updates.put((kind, value, None))
 
     def remote(self, item):
         return RemoteFile(item.size,
@@ -220,7 +267,9 @@ class Window:
     def poll(self):
         try:
             for _ in range(200):
-                kind, value = self.updates.get_nowait()
+                kind, value, generation = self.updates.get_nowait()
+                if generation is not None and generation != self.generation:
+                    continue
                 if kind == "zips":
                     self.start_reading(value)
                 elif kind == "reading":
@@ -239,6 +288,7 @@ class Window:
                     self.stop_progress()
                     self.total.config(text="Could not list the files")
                     self.detail.config(text=value)
+                    self.enable_search()
                 elif kind == "status":
                     self.status.config(text=value)
                 elif kind == "tags":
@@ -268,22 +318,27 @@ class Window:
 
     def update_counts(self):
         self.progress.config(value=self.zips_done)
-        self.total.config(text=f"{len(self.rows):,} files in {self.zips_done:,} of {self.zips_total:,} ZIPs")
+        self.total.config(text=f"{len(self.rows):,} files in {self.zips_done:,} of {self.zips_total:,} archives")
         self.update_shown()
         if self.failed:
             names = ", ".join(z.name for z in self.failed[:3])
             more = f" and {len(self.failed) - 3:,} more" if len(self.failed) > 3 else ""
-            self.note.config(text=f"Could not read {len(self.failed):,} ZIP(s): {names}{more}")
+            self.note.config(text=f"Could not read {len(self.failed):,} archive(s) as ZIP: {names}{more}")
             self.note.pack(anchor="w", pady=(self.px(2), 0), before=self.progress)
 
     def finish(self):
         self.stop_progress()
         if not self.zips_total:
-            self.total.config(text="No ZIP files")
-            self.detail.config(text=f"No ZIP file in {self.scope()}.")
+            self.total.config(text="No archives")
+            self.detail.config(text=f"No {self.kinds()} file in {self.scope()}.")
         else:
-            self.total.config(text=f"{len(self.rows):,} files in {self.zips_total:,} ZIPs")
-            self.detail.config(text=f"Every ZIP in {self.scope()} has been read.")
+            self.total.config(text=f"{len(self.rows):,} files in {self.zips_total:,} archives")
+            self.detail.config(text=f"Every {self.kinds()} file in {self.scope()} has been read.")
+        self.enable_search()
+
+    def enable_search(self):
+        self.search_button.config(state="normal")
+        self.extensions_entry.config(state="normal")
 
     def stop_progress(self):
         self.progress.stop()
@@ -394,13 +449,13 @@ class Window:
     def save_tags(self, item, add, remove):
         try:
             updated = self.ctx.update(item, tags_add=add, tags_remove=remove)
-            self.updates.put(("tags", (item.handle, updated.tags or [])))
-            self.updates.put(("status", f"Saved the tags of {item.name}"))
+            self.notify("tags", (item.handle, updated.tags or []))
+            self.notify("status", f"Saved the tags of {item.name}")
         except RpcError as e:
-            self.updates.put(("status", f"Could not save the tags of {item.name}: {e.message}"))
+            self.notify("status", f"Could not save the tags of {item.name}: {e.message}")
             # A failed update may have applied its removals already.
             try:
-                self.updates.put(("tags", (item.handle, self.ctx.get(item, fields=["tags"]).tags or [])))
+                self.notify("tags", (item.handle, self.ctx.get(item, fields=["tags"]).tags or []))
             except RpcError:
                 pass
 
@@ -431,18 +486,18 @@ class Window:
             if self.closing.is_set():
                 return
             self.downloading.set()
-            self.updates.put(("status", f"Downloading {entry.name} ({format_size(entry.size)}) from {item.name}..."))
+            self.notify("status", f"Downloading {entry.name} ({format_size(entry.size)}) from {item.name}...")
             try:
                 path = self.save(item, entry)
                 if path is not None:
-                    self.updates.put(("status", f"Saved {path}"))
+                    self.notify("status", f"Saved {path}")
             except Cancelled:
                 return
             except RpcError as e:
-                self.updates.put(("status", f"Could not download {entry.name}: {e.message}"))
+                self.notify("status", f"Could not download {entry.name}: {e.message}")
             except Exception as e:  # an encrypted or unsupported entry must not stop the worker
                 print(f"could not extract {entry.name} from {item.path}: {e!r}", file=sys.stderr)
-                self.updates.put(("status", f"Could not download {entry.name}: {e}"))
+                self.notify("status", f"Could not download {entry.name}: {e}")
             finally:
                 if self.downloads.empty():
                     self.downloading.clear()

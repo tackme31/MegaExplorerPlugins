@@ -14,7 +14,11 @@ One command in the **ZIP Search** submenu of the right-click menu: **List files 
 opens a window of its own.
 
 - **What is searched** is every `.zip` file in the folder you right-clicked and everything below it,
-  at any depth. Right-click the empty space of a folder for the folder you are in, or the Cloud
+  at any depth.
+- **Other extensions**: the box at the top takes a comma-separated list (`zip, cbz, epub`); press
+  **Search** or Enter to search again with it. It is disabled while a search runs, and every window
+  starts with `zip`. Only archives in ZIP format can be read (`.cbz`, `.epub`, `.jar`, Office
+  files, …); others such as `.rar` or `.7z` are counted as unreadable. Right-click the empty space of a folder for the folder you are in, or the Cloud
   Drive for the whole drive. Several selected folders are searched together.
 - **The table** has one row per file: the ZIP it is in, its folder inside the ZIP, its name, its
   size, and the ZIP's MEGA tags. Folders inside a ZIP have no rows of their own.
