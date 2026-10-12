@@ -1,7 +1,8 @@
 # ZIP Search for MEGA Explorer
 
-A MEGA Explorer plugin that lists the files inside every ZIP under a folder, in one table you can
-filter by file name or by the ZIP's tags, edit those tags, and saves a single file out of its ZIP without downloading the whole archive.
+A MEGA Explorer plugin that lists the files inside every ZIP under a folder in one table, filtered
+by file name or by the ZIP's tags. It saves a single file out of its ZIP without downloading the
+whole archive, and edits the ZIP's tags.
 
 **Only the parts that are needed are read.** A ZIP keeps an index of its contents at its end; the
 plugin reads just that index from MEGA for each ZIP, usually in one small request, and to save a
