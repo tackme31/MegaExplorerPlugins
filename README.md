@@ -9,6 +9,7 @@ its top) with its own README covering features, installation and building.
 | [WD Tagger](wdtagger_plugin/README.md) | Tags images and videos with what is in them, using a WD14 tagger model on the GPU, and stores the result as MEGA tags you can search for. |
 | [WD Tag Search](wdtagsearch_plugin/README.md) | Searches by WD Tagger's tags: builds a `tag:` query with suggestions from the tags on your files and a count of the files it matches, then runs it in MEGA Explorer's search. Read-only. |
 | [Duplicate Finder](dupfinder_plugin/README.md) | Lists the files under a folder that have the same content, grouped, with the space the extra copies waste, using the checksum MEGA keeps with each file — nothing is downloaded. **Go to file** shows a copy in the app. Read-only. |
+| [ZIP Search](zip_search/README.md) | Lists the files inside every ZIP under a folder in one filterable table, reading only each ZIP's index, and saves a single file out of its ZIP without downloading the whole archive. |
 
 ## License
 

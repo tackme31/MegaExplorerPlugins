@@ -1,0 +1,13 @@
+{
+  "manifestVersion": 1,
+  "id": "com.takumi.zipsearch",
+  "name": "ZIP Search",
+  "version": "0.1.0",
+  "description": "Lists the files inside every ZIP under a folder, with a name filter, and saves a single file out of its ZIP without downloading the whole archive.",
+  "apiVersion": 1,
+  "run": { "command": "uv", "args": ["run", "--quiet", "main.py"] },
+  "permissions": ["items.read", "content.read"],
+  "commands": [
+    { "id": "search", "title": "List files in ZIPs...", "progress": "never", "when": { "targets": "folders" } }
+  ]
+}

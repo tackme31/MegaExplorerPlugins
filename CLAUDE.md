@@ -19,6 +19,7 @@ and its own README (features, installation, building) and LICENSE. `README.md` h
 | `wdtagger_plugin/` | WD Tagger: tags images/videos with a WD14 model on the GPU, as MEGA tags | Python / uv |
 | `wdtagsearch_plugin/` | WD Tag Search: builds a `tag:` query over WD Tagger's tags, with suggestions and a match count, and runs it in the app. Read-only. | Python / uv |
 | `dupfinder_plugin/` | Duplicate Finder: groups the files under a folder by size and MEGA's content checksum (`crc`) and lists the duplicates. Read-only. | Python / uv |
+| `zip_search/` | ZIP Search: lists the files inside every ZIP under a folder, filterable, and saves one file out of its ZIP. | Python / uv |
 
 Branch `main` only, pushed to `origin` (GitHub); pushing it is fine. Releases are zips of one
 plugin folder, published as GitHub releases by `/release` (`.claude/skills/release/`).
@@ -126,6 +127,22 @@ uv run python -m unittest
   `crc` item field (an older app answers `-32602` for the unknown field).
 - Read-only by decision: copies are dealt with in the app after **Go to file** (`ui.reveal`).
   `docs/SPEC.md` (Japanese) records this and the other decisions; read it before changing behaviour.
+
+## zip_search (Python / uv)
+
+```
+uv run python -m unittest
+```
+
+- No dependencies beyond Python; the window is tkinter. `zipindex.py` is the testable part,
+  `main.py` the window, the reading thread and the saving thread.
+- Reads ZIPs through `items.readRange` (a ZIP's tail: end record + central directory, usually one
+  call per ZIP) and hands that to the standard `zipfile` as a seekable file. Saving re-reads the
+  index, then fetches an entry above 1 MiB with one ranged `items.fetchFile`. Both reach MEGA, so
+  try it on a few small ZIPs.
+- Entry names without the UTF-8 flag are tried as UTF-8, then CP932, then left as CP437 — only
+  for display: `zipfile` needs the original name to open the entry.
+- The folder name has no `_plugin` suffix because the user named it so.
 
 ## Writing docs and commits
 
