@@ -45,7 +45,8 @@ opens a window of its own.
   the plugin's folder. A later search takes a ZIP's files from there instead of reading MEGA, as
   long as the ZIP's modified time and size are unchanged; a changed ZIP is read again. The box is
   remembered between windows. **Clear cache** deletes the whole cache. The line under the count
-  says how many archives came from the cache.
+  says how many archives came from the cache. Note that `cache.json` is plain, unencrypted text:
+  it holds the names of the files inside your ZIPs, which MEGA otherwise keeps encrypted.
 - **Names written by older Japanese tools** (Shift_JIS without the UTF-8 flag) are shown correctly.
 - **ZIPs that cannot be read** (damaged, or not really ZIPs) are counted above the table; the reason
   for each is in MEGA Explorer's log.
