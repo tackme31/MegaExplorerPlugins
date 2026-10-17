@@ -1,5 +1,7 @@
 # MegaDirStat for MEGA Explorer
 
+![](./img/screenshot.png)
+
 A MEGA Explorer plugin that shows what takes up the space in a folder: a
 size-sorted tree on top and a treemap below, in a window of its own.
 
