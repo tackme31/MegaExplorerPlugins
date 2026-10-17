@@ -1,0 +1,55 @@
+@import 'tailwindcss';
+
+:root {
+  color-scheme: dark;
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  background: #000;
+  user-select: none;
+}
+
+/* The title bar strip; the window controls on its right are Electron's titleBarOverlay. */
+.drag {
+  -webkit-app-region: drag;
+}
+
+.edge {
+  cursor: inherit;
+  outline: none;
+}
+
+.slider {
+  appearance: none;
+  height: 4px;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.12);
+  outline: none;
+}
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.5);
+  cursor: pointer;
+}
+.slider:disabled {
+  opacity: 0.35;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.12);
+  border-radius: 9999px;
+}

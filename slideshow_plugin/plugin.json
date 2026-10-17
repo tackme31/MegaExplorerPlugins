@@ -1,0 +1,14 @@
+{
+  "manifestVersion": 1,
+  "id": "com.takumi.slideshow",
+  "name": "Slideshow",
+  "version": "0.1.0",
+  "description": "Plays the images in a folder as a full-window slideshow, with sorting, filtering and transitions.",
+  "apiVersion": 1,
+  "run": { "command": "bin/win-unpacked/Slideshow.exe" },
+  "permissions": ["items.read", "content.stream"],
+  "commands": [
+    { "id": "this-folder", "title": "This folder only", "progress": "never", "when": { "targets": "folders" } },
+    { "id": "subfolders", "title": "Including subfolders", "progress": "never", "when": { "targets": "folders" } }
+  ]
+}
