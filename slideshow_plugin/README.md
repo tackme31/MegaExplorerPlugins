@@ -50,9 +50,10 @@ fade out after a moment. **Show in MEGA Explorer** selects the current image in 
   is kept when its tags contain every term under **Tags contain** and none under **Tags don't
   contain** — part of a tag is enough, ignoring case.
 - *Other* — whether the controls and the image info appear only while the mouse moves or stay on
-  screen all the time (the cursor still hides when the mouse rests). **Countdown bar**: a thin bar along the bottom edge that shrinks until the next image,
-  shown even while the controls are hidden. Never shown while paused or in full screen. **Image
-  info**: the file's name, date, size, folder and tags shown with the controls.
+  screen all the time (the cursor still hides when the mouse rests). **Countdown bar** (off by
+  default): a thin bar along the bottom edge that shrinks until the next image, shown even while
+  the controls are hidden. Never shown while paused or in full screen. **Image info**: the file's
+  name, date, size, folder and tags shown with the controls.
 
 The settings and the window's position and size are saved in `settings.json` in the plugin's
 folder. Replacing the folder with a new version resets them.

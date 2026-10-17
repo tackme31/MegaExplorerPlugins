@@ -82,7 +82,7 @@ export const DEFAULT_SETTINGS: Settings = {
     minSizeMB: null,
     maxSizeMB: null
   },
-  showCountdown: true,
+  showCountdown: false,
   showInfo: true,
   chrome: 'hover',
   window: { width: 1280, height: 800, maximized: false }
