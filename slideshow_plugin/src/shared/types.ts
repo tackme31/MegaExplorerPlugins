@@ -16,6 +16,7 @@ export type SortKey = 'name' | 'mtime' | 'size' | 'path' | 'random'
 export type Transition = 'none' | 'fade' | 'slide' | 'zoom'
 export type Fit = 'contain' | 'cover' | 'actual'
 export type AtEnd = 'loop' | 'stop' | 'close'
+export type ChromeMode = 'hover' | 'always'
 
 export interface Filters {
   favouritesOnly: boolean
@@ -55,6 +56,10 @@ export interface Settings {
   filters: Filters
   // The bar along the bottom edge that shrinks until the next image.
   showCountdown: boolean
+  // The file's name, date, size, folder and tags, shown with the controls.
+  showInfo: boolean
+  // When the controls and the image info are shown: while the mouse moves, or all the time.
+  chrome: ChromeMode
   window: WindowState
 }
 
@@ -78,6 +83,8 @@ export const DEFAULT_SETTINGS: Settings = {
     maxSizeMB: null
   },
   showCountdown: true,
+  showInfo: true,
+  chrome: 'hover',
   window: { width: 1280, height: 800, maximized: false }
 }
 

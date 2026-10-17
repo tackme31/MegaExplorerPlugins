@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { X } from 'lucide-react'
 import { DEFAULT_SETTINGS, extensionOf, IMAGE_EXTENSIONS } from '@shared/types'
-import type { AtEnd, Filters, Fit, Item, Settings, SortKey, Transition } from '@shared/types'
+import type { AtEnd, ChromeMode, Filters, Fit, Item, Settings, SortKey, Transition } from '@shared/types'
 import { shortTag } from './playlist'
 
 interface Props {
@@ -312,7 +312,18 @@ export function SettingsPanel({ settings, items, matchCount, onChange, onClose }
         </Section>
 
         <Section title="Other">
+          <Row label="Controls and image info">
+            <Segmented<ChromeMode>
+              value={settings.chrome}
+              options={[
+                ['hover', 'On mouse move'],
+                ['always', 'Always']
+              ]}
+              onChange={(v) => set({ chrome: v })}
+            />
+          </Row>
           <Switch label="Countdown bar" checked={settings.showCountdown} onChange={(v) => set({ showCountdown: v })} />
+          <Switch label="Image info" checked={settings.showInfo} onChange={(v) => set({ showInfo: v })} />
         </Section>
       </div>
     </aside>

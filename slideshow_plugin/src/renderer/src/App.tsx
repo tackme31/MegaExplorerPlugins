@@ -276,12 +276,14 @@ export function App() {
     advance(e.deltaY > 0 ? 1 : -1, false)
   }
 
-  const showChrome = active || hoveringControls || panelOpen
+  // The cursor and the edge arrows still hide when the mouse rests, even with the chrome pinned.
+  const awake = active || hoveringControls || panelOpen
+  const showChrome = awake || settings?.chrome === 'always'
   const top = fullscreen ? 0 : TITLE_BAR
   const shown = playlist.find((item) => item.handle === shownHandle) ?? null
 
   return (
-    <div className={`fixed inset-0 overflow-hidden bg-black text-white ${showChrome ? '' : 'cursor-none'}`} onMouseMove={wake}>
+    <div className={`fixed inset-0 overflow-hidden bg-black text-white ${awake ? '' : 'cursor-none'}`} onMouseMove={wake}>
       {!fullscreen && (
         <div className="drag fixed inset-x-0 top-0 z-40 flex items-center pl-4 text-[12px] text-white/45" style={{ height: TITLE_BAR }}>
           <span className="truncate pr-40">{session ? session.scope : 'Slideshow'}</span>
@@ -302,14 +304,14 @@ export function App() {
         {playlist.length > 1 && (
           <>
             <button className="edge group absolute inset-y-0 left-0 w-[16%]" onClick={() => advance(-1, false)} title="Previous (←)">
-              <ChevronLeft className={`ml-4 opacity-0 transition-opacity ${showChrome ? 'group-hover:opacity-70' : ''}`} size={36} />
+              <ChevronLeft className={`ml-4 opacity-0 transition-opacity ${awake ? 'group-hover:opacity-70' : ''}`} size={36} />
             </button>
             <button
               className="edge group absolute inset-y-0 right-0 flex w-[16%] justify-end"
               onClick={() => advance(1, false)}
               title="Next (→)"
             >
-              <ChevronRight className={`mr-4 self-center opacity-0 transition-opacity ${showChrome ? 'group-hover:opacity-70' : ''}`} size={36} />
+              <ChevronRight className={`mr-4 self-center opacity-0 transition-opacity ${awake ? 'group-hover:opacity-70' : ''}`} size={36} />
             </button>
           </>
         )}
@@ -340,7 +342,7 @@ export function App() {
           </div>
         )}
 
-        {shown && (
+        {shown && settings?.showInfo && (
           <div
             className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent px-6 pt-24 pb-5 transition-opacity duration-300 ${
               showChrome ? 'opacity-100' : 'opacity-0'
