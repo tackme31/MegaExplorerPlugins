@@ -98,7 +98,7 @@ class Window:
         self.scanner = None
         self.generation = 0        # bumped per search; updates of an earlier one are dropped
         self.downloads = queue.Queue()
-        self.downloading = threading.Event()
+        self.download_gen = 0      # bumped by Cancel; a download of an earlier one stops
 
         make_dpi_aware()
         self.root = tk.Tk()
@@ -191,9 +191,12 @@ class Window:
         # Packed before the table so the table, not the status line, gives way when the window shrinks.
         bar = ttk.Frame(parent)
         bar.pack(side="bottom", fill="x", pady=(self.px(8), 0))
+        self.cancel_button = ttk.Button(bar, text="Cancel", command=self.cancel_downloads, state="disabled")
+        self.cancel_button.pack(side="right")
         self.status = ttk.Label(bar, text="Right-click a file to save it to your Downloads folder.",
                                 foreground="gray40")
         self.status.pack(side="left", fill="x", expand=True)
+        self.download_bar = ttk.Progressbar(bar, mode="determinate", maximum=1, length=self.px(160))
 
     def build_table(self, parent):
         table = ttk.Frame(parent)
@@ -365,6 +368,8 @@ class Window:
                     self.enable_search()
                 elif kind == "status":
                     self.status.config(text=value)
+                elif kind == "download":
+                    self.show_download(value)
                 elif kind == "tags":
                     self.set_tags(*value)
         except queue.Empty:
@@ -550,23 +555,59 @@ class Window:
     # --- saving a file out of its ZIP -------------------------------------------------
 
     def download_selected(self):
-        rows = self.selected_rows()
-        for row in rows:
-            self.downloads.put(row)
-        if rows and not self.downloading.is_set():
-            self.status.config(text=f"Downloading {rows[0][1].name}...")
+        for item, entry in self.selected_rows():
+            self.downloads.put((item, entry, self.download_gen))
+
+    def cancel_downloads(self):
+        self.download_gen += 1
+        try:
+            while True:
+                self.downloads.get_nowait()
+        except queue.Empty:
+            pass
+        self.status.config(text="Cancelling...")
+
+    def show_download(self, state):
+        if state is None:
+            self.download_bar.pack_forget()
+            self.cancel_button.config(state="disabled")
+            return
+        text, fraction = state
+        self.status.config(text=text)
+        self.download_bar.config(value=fraction or 0)
+        if not self.download_bar.winfo_ismapped():
+            self.download_bar.pack(side="right", padx=(self.px(8), self.px(8)), before=self.status)
+        self.cancel_button.config(state="normal")
 
     def download_worker(self):
+        number = 0                 # this one's place among the downloads queued without a pause
         while True:
-            item, entry = self.downloads.get()
+            item, entry, gen = self.downloads.get()
             if self.closing.is_set():
                 return
-            self.downloading.set()
-            self.notify("status", f"Downloading {entry.name} ({format_size(entry.size)}) from {item.name}...")
+
+            def cancelled():
+                return self.closing.is_set() or gen != self.download_gen
+
+            def show(done=None, total=None):
+                fraction = done / total if total else None
+                count = number + self.downloads.qsize()
+                text = f"Downloading {entry.name} ({format_size(entry.size)}) from {item.name}"
+                if fraction is not None:
+                    text += f" - {fraction:.0%}"
+                if count > 1:
+                    text += f" ({number:,} of {count:,})"
+                self.notify("download", (text, fraction))
+
             try:
-                path = self.save(item, entry)
-                if path is not None:
-                    self.notify("status", f"Saved {path}")
+                if not cancelled():
+                    number += 1
+                    show()
+                    path = self.save(item, entry, cancelled, show)
+                    if path is not None:
+                        self.notify("status", f"Saved {path}")
+                    elif not self.closing.is_set():
+                        self.notify("status", f"Cancelled the download of {entry.name}")
             except Cancelled:
                 return
             except RpcError as e:
@@ -576,9 +617,10 @@ class Window:
                 self.notify("status", f"Could not download {entry.name}: {e}")
             finally:
                 if self.downloads.empty():
-                    self.downloading.clear()
+                    number = 0
+                    self.notify("download", None)
 
-    def save(self, item, entry):
+    def save(self, item, entry, cancelled, progress):
         folder = downloads_folder()
         os.makedirs(folder, exist_ok=True)
         part = None
@@ -587,7 +629,7 @@ class Window:
                 target = unique_path(folder, safe_file_name(entry.name))
                 part = target + ".part"
                 with open(part, "wb") as out:
-                    done = extract(remote, entry.offset, out, self.closing.is_set)
+                    done = extract(remote, entry.offset, out, cancelled, progress)
                 if not done:
                     return None
                 # Another save may have taken the name while this one ran.
@@ -601,7 +643,7 @@ class Window:
 
     def close(self):
         self.closing.set()
-        self.downloads.put((None, None))
+        self.downloads.put((None, None, None))
         self.root.destroy()
 
     def run(self):

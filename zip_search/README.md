@@ -32,6 +32,10 @@ opens a window of its own.
 - **Right-click a row → Download** saves that file to your Downloads folder (a name already taken
   gets ` (1)`, ` (2)`, … added). Select several rows to save them all, one after another. The
   status line under the table says where each one went.
+- **Download progress** is shown at the bottom of the window while files are being saved: a bar,
+  the percentage of a file larger than 1 MiB (fetched in 8 MiB pieces), and which file of how
+  many. **Cancel** at the bottom right stops the file being saved, after the piece in flight, and
+  drops the ones still waiting; nothing half-written is left behind.
 - **Right-click a row → Show ZIP in MEGA Explorer** selects the ZIP the file is in, in the app's
   current tab.
 - **Right-click a row → Edit tags...** opens a dialog with ten boxes, one per tag MEGA allows on

@@ -139,8 +139,11 @@ uv run python -m unittest
   `main.py` the window, the reading thread and the saving thread.
 - Reads ZIPs through `items.readRange` (a ZIP's tail: end record + central directory, usually one
   call per ZIP) and hands that to the standard `zipfile` as a seekable file. Saving re-reads the
-  index, then fetches an entry above 1 MiB with one ranged `items.fetchFile`. Both reach MEGA, so
-  try it on a few small ZIPs.
+  index, then fetches an entry above 1 MiB with ranged `items.fetchFile` calls of 8 MiB each, so
+  the window can show progress (the app reports none within one call). Both reach MEGA, so try it
+  on a few small ZIPs.
+- "Use cache" (off by default, kept in `settings.json`) keeps each index read in `cache.json`,
+  reused while the ZIP's handle, mtime and size match. Both files are gitignored.
 - Entry names without the UTF-8 flag are tried as UTF-8, then CP932, then left as CP437 — only
   for display: `zipfile` needs the original name to open the entry.
 - Edits the ZIP's own MEGA tags (`items.update`, permission `items.edit`); only the difference is

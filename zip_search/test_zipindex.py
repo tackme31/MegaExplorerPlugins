@@ -5,6 +5,7 @@ import tempfile
 import unittest
 import zipfile
 
+import zipindex
 from zipindex import (BLOCK, READ_LIMIT, IndexCache, RemoteFile, clean_tags, display_name, extract, filter_terms,
                       format_size, has_extension, list_entries, matches, parse_extensions, safe_file_name,
                       tag_changes, tag_filter_terms, tags_match, unique_path)
@@ -148,6 +149,36 @@ class ExtractTest(unittest.TestCase):
         self.assertEqual(self.extract_named(mega, "big.bin"), payload)
         self.assertEqual(len(mega.fetches), 1)
         self.assertLessEqual(len(mega.reads), 3)
+
+    def test_a_large_entry_comes_in_chunks_with_progress(self):
+        payload = random.Random(3).randbytes(3 * READ_LIMIT + 7)
+        mega = FakeMega(make_zip({"big.bin": payload}, zipfile.ZIP_STORED))
+        entry = list_entries(mega.remote())[0]
+        calls = []
+        original = zipindex.FETCH_CHUNK
+        zipindex.FETCH_CHUNK = READ_LIMIT
+        try:
+            out = io.BytesIO()
+            with mega.remote() as remote:
+                self.assertTrue(extract(remote, entry.offset, out, progress=lambda d, t: calls.append((d, t))))
+        finally:
+            zipindex.FETCH_CHUNK = original
+        self.assertEqual(out.getvalue(), payload)
+        self.assertEqual(len(mega.fetches), 3)   # the last bytes came in with the index
+        self.assertEqual([d for d, _ in calls], [READ_LIMIT, 2 * READ_LIMIT, 3 * READ_LIMIT, len(payload)])
+        self.assertTrue(all(t == len(payload) for _, t in calls))
+
+    def test_cancel_between_chunks_stops_fetching(self):
+        mega = FakeMega(make_zip({"big.bin": bytes(3 * READ_LIMIT)}, zipfile.ZIP_STORED))
+        entry = list_entries(mega.remote())[0]
+        original = zipindex.FETCH_CHUNK
+        zipindex.FETCH_CHUNK = READ_LIMIT
+        try:
+            with mega.remote() as remote:
+                self.assertFalse(extract(remote, entry.offset, io.BytesIO(), lambda: bool(mega.fetches)))
+        finally:
+            zipindex.FETCH_CHUNK = original
+        self.assertEqual(len(mega.fetches), 1)
 
     def test_a_small_entry_reads_little(self):
         mega = FakeMega(make_zip({"pad.bin": bytes(4 * READ_LIMIT), "small.txt": b"s" * 100,

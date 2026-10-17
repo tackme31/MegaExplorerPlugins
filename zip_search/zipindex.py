@@ -13,7 +13,8 @@ from dataclasses import dataclass
 READ_LIMIT = 1 << 20      # items.readRange answers at most 1 MiB
 BLOCK = 64 << 10          # smallest read: a local header and a small entry in one call
 TAIL = 128 << 10          # the end record, the comment and usually the whole central directory
-FETCH_ABOVE = 1 << 20     # entry data bigger than this comes in one items.fetchFile
+FETCH_ABOVE = 1 << 20     # entry data bigger than this comes through items.fetchFile
+FETCH_CHUNK = 8 << 20     # one items.fetchFile at most, so a large entry can report progress
 
 
 class _Bytes:
@@ -99,13 +100,24 @@ class RemoteFile:
             pos = segment.end
         return True
 
-    def prefetch(self, start, length):
-        """Brings start..start+length in through one fetch_range, as a local file."""
-        if self._fetch_range is None or self.covered(start, start + length):
-            return
-        self.calls += 1
-        path = self._fetch_range(start, length)
-        self._segments.append(_LocalFile(start, os.path.getsize(path), path))
+    def prefetch(self, start, length, cancelled=lambda: False, progress=None):
+        """Brings start..start+length in as local files, FETCH_CHUNK per fetch_range,
+        calling progress(done, length) after each. False if cancelled() turned true."""
+        if self._fetch_range is None:
+            return True
+        done = 0
+        while done < length:
+            if cancelled():
+                return False
+            n = min(FETCH_CHUNK, length - done)
+            if not self.covered(start + done, start + done + n):
+                self.calls += 1
+                path = self._fetch_range(start + done, n)
+                self._segments.append(_LocalFile(start + done, os.path.getsize(path), path))
+            done += n
+            if progress is not None:
+                progress(done, length)
+        return True
 
     def close(self):
         for segment in self._segments:
@@ -184,9 +196,10 @@ def list_entries(remote):
         return entries
 
 
-def extract(remote, offset, out, cancelled=lambda: False):
+def extract(remote, offset, out, cancelled=lambda: False, progress=None):
     """Writes the entry whose local header is at offset in the ZIP read through remote
-    to the binary file out. Returns False if cancelled() turned true part-way."""
+    to the binary file out. Returns False if cancelled() turned true part-way.
+    progress(done, total) follows the download of a large entry's data."""
     with zipfile.ZipFile(remote) as archive:
         info = next((i for i in archive.infolist() if i.header_offset == offset), None)
         if info is None:
@@ -198,7 +211,8 @@ def extract(remote, offset, out, cancelled=lambda: False):
         name_length, extra_length = struct.unpack("<HH", header[26:30])
         data_start = info.header_offset + 30 + name_length + extra_length
         if info.compress_size > FETCH_ABOVE:
-            remote.prefetch(data_start, info.compress_size)
+            if not remote.prefetch(data_start, info.compress_size, cancelled, progress):
+                return False
         with archive.open(info) as source:
             while True:
                 if cancelled():
