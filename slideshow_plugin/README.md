@@ -1,5 +1,7 @@
 # Slideshow for MEGA Explorer
 
+![](./img/screenshot.png)
+
 A MEGA Explorer plugin that plays the images in a folder as a slideshow, in a window of its own:
 the order, the filter, how long each image stays and how one gives way to the next are all set
 while it plays.
