@@ -9,6 +9,7 @@ export interface Item {
   mtime: number
   path: string
   tags: string[]
+  favourite: boolean
 }
 
 export type SortKey = 'name' | 'mtime' | 'size' | 'path' | 'random'
@@ -17,6 +18,7 @@ export type Fit = 'contain' | 'cover' | 'actual'
 export type AtEnd = 'loop' | 'stop' | 'close'
 
 export interface Filters {
+  favouritesOnly: boolean
   nameContains: string
   // Terms, each matching any tag that contains it, ignoring case: tags can be long (a tagger
   // plugin writes whole phrases), so an exact match would be impractical to type.
@@ -65,6 +67,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sortKey: 'name',
   sortDescending: false,
   filters: {
+    favouritesOnly: false,
     nameContains: '',
     tagsInclude: [],
     tagsExclude: [],

@@ -10,6 +10,7 @@ function startOfDay(iso: string): number {
 }
 
 export function matches(item: Item, f: Filters): boolean {
+  if (f.favouritesOnly && !item.favourite) return false
   if (f.nameContains && !item.name.toLowerCase().includes(f.nameContains.toLowerCase())) return false
   if (f.extensionsExcluded.includes(extensionOf(item.name))) return false
   if (f.tagsInclude.length || f.tagsExclude.length) {

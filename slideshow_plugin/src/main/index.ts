@@ -69,7 +69,7 @@ function writeSettings(): void {
   }
 }
 
-const FIELDS = ['name', 'size', 'mtime', 'path', 'tags']
+const FIELDS = ['name', 'size', 'mtime', 'path', 'tags', 'favourite']
 const SUPPORTED = new Set<string>(IMAGE_EXTENSIONS)
 
 async function listImages(params: ExecuteParams): Promise<Session> {

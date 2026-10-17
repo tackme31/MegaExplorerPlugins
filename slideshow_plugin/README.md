@@ -45,7 +45,7 @@ fade out after a moment. **Show in MEGA Explorer** selects the current image in 
   stop, close the window).
 - *Order* — by name (2 before 10), date modified, size or path, ascending or descending, or random,
   which shuffles again on every lap.
-- *Filter* — name contains, formats, tags, date modified range and size range, with the number of
+- *Filter* — name contains, formats, favourites only, tags, date modified range and size range, with the number of
   images that match. A tag term is typed and committed with Enter, then shown as a chip: an image
   is kept when its tags contain every term under **Tags contain** and none under **Tags don't
   contain** — part of a tag is enough, ignoring case.

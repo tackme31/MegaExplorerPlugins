@@ -272,6 +272,7 @@ export function SettingsPanel({ settings, items, matchCount, onChange, onClose }
               </div>
             </Row>
           )}
+          <Switch label="Favourites only" checked={f.favouritesOnly} onChange={(v) => setFilter({ favouritesOnly: v })} />
           <Row label="Tags contain">
             <TermChips value={f.tagsInclude} placeholder="Type and press Enter" onChange={(v) => setFilter({ tagsInclude: v })} />
           </Row>
