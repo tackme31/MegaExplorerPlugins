@@ -71,6 +71,22 @@ function Slider(props: { value: number; min: number; max: number; step: number; 
   )
 }
 
+function Switch(props: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={props.checked}
+      onClick={() => props.onChange(!props.checked)}
+      className="flex w-full items-center justify-between text-[13px]"
+    >
+      <span className="text-white/70">{props.label}</span>
+      <span className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${props.checked ? 'bg-sky-500' : 'bg-white/15'}`}>
+        <span className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${props.checked ? 'translate-x-4' : ''}`} />
+      </span>
+    </button>
+  )
+}
+
 const inputClass =
   'w-full rounded-lg border border-white/8 bg-white/6 px-2.5 py-1.5 text-[13px] text-white placeholder:text-white/30 outline-none focus:border-white/25'
 
@@ -292,6 +308,10 @@ export function SettingsPanel({ settings, items, matchCount, onChange, onClose }
               />
             </div>
           </Row>
+        </Section>
+
+        <Section title="Other">
+          <Switch label="Countdown bar" checked={settings.showCountdown} onChange={(v) => set({ showCountdown: v })} />
         </Section>
       </div>
     </aside>

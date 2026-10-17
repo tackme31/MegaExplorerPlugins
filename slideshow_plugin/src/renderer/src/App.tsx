@@ -5,7 +5,7 @@
 // The current image is tracked by handle, not index, so re-sorting or filtering keeps it on
 // screen when it survives the change.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, FolderSearch, Maximize, Minimize, Pause, Play, Settings2 } from 'lucide-react'
 import type { Session, Settings } from '@shared/types'
 import { buildPlaylist, formatDate, formatSize, shortTag } from './playlist'
@@ -31,6 +31,24 @@ function IconButton(props: { title: string; onClick: () => void; children: React
     >
       {props.children}
     </button>
+  )
+}
+
+// Remounted (by key) whenever the advance timer restarts, so it always runs in step with it.
+function CountdownBar(props: { durationMs: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const animation = ref.current?.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)' }], {
+      duration: props.durationMs,
+      easing: 'linear',
+      fill: 'forwards'
+    })
+    return () => animation?.cancel()
+  }, [props.durationMs])
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-1">
+      <div ref={ref} className="h-full origin-left bg-red-600/70" />
+    </div>
   )
 }
 
@@ -380,6 +398,10 @@ export function App() {
               {fullscreen ? <Minimize size={17} /> : <Maximize size={17} />}
             </IconButton>
           </div>
+        )}
+
+        {playing && !fullscreen && settings?.showCountdown && target && target.handle === shownHandle && (
+          <CountdownBar key={`${slides.current?.key}:${settings.intervalSec}`} durationMs={settings.intervalSec * 1000} />
         )}
 
         {!playing && shown && !showChrome && (

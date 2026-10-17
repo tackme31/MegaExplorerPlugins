@@ -51,6 +51,8 @@ export interface Settings {
   sortKey: SortKey
   sortDescending: boolean
   filters: Filters
+  // The bar along the bottom edge that shrinks until the next image.
+  showCountdown: boolean
   window: WindowState
 }
 
@@ -72,6 +74,7 @@ export const DEFAULT_SETTINGS: Settings = {
     minSizeMB: null,
     maxSizeMB: null
   },
+  showCountdown: true,
   window: { width: 1280, height: 800, maximized: false }
 }
 
