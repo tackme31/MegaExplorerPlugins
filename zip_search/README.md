@@ -37,6 +37,11 @@ opens a window of its own.
 - **Right-click a row → Edit tags...** opens a dialog with ten boxes, one per tag MEGA allows on
   an item, filled with the ZIP's current tags. **Submit** saves the changes to MEGA; empty boxes
   are ignored, and a tag cannot contain a comma. The table and the tag filter follow at once.
+- **Use cache** (off by default) keeps each ZIP's index once it has been read, in `cache.json` in
+  the plugin's folder. A later search takes a ZIP's files from there instead of reading MEGA, as
+  long as the ZIP's modified time and size are unchanged; a changed ZIP is read again. The box is
+  remembered between windows. **Clear cache** deletes the whole cache. The line under the count
+  says how many archives came from the cache.
 - **Names written by older Japanese tools** (Shift_JIS without the UTF-8 flag) are shown correctly.
 - **ZIPs that cannot be read** (damaged, or not really ZIPs) are counted above the table; the reason
   for each is in MEGA Explorer's log.
@@ -65,7 +70,7 @@ uv run python -m unittest
 
 | File | What it holds |
 | --- | --- |
-| `zipindex.py` | Reading a ZIP's index and one entry through byte-range reads, name decoding, the filter. What the tests cover. |
+| `zipindex.py` | Reading a ZIP's index and one entry through byte-range reads, name decoding, the filter, the index cache. What the tests cover. |
 | `main.py` | The window, the thread that reads the ZIPs, and the one that saves files. |
 | `megaexplorer_plugin.py` | A copy of the helper in MEGA Explorer's sample plugin. Change the original, then copy it here. |
 

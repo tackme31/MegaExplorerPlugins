@@ -4,25 +4,50 @@ its ZIP without downloading the rest. The ZIP reading is in zipindex.py.
 """
 
 import ctypes
+import json
 import os
 import queue
 import sys
 import threading
+import time
 import tkinter as tk
 from ctypes import wintypes
 from tkinter import font as tkfont
 from tkinter import ttk
 
 from megaexplorer_plugin import Cancelled, Plugin, RpcError
-from zipindex import (MAX_TAGS, RemoteFile, clean_tags, extract, filter_terms, format_size, has_extension,
-                      list_entries, matches, parse_extensions, safe_file_name, tag_changes, tag_filter_terms,
-                      tags_match, unique_path)
+from zipindex import (MAX_TAGS, IndexCache, RemoteFile, clean_tags, extract, filter_terms, format_size,
+                      has_extension, list_entries, matches, parse_extensions, safe_file_name, tag_changes,
+                      tag_filter_terms, tags_match, unique_path)
 
 plugin = Plugin()
 
-ZIP_FIELDS = ["name", "size", "path", "tags"]
+ZIP_FIELDS = ["name", "size", "mtime", "path", "tags"]
 DEFAULT_EXTENSIONS = "zip"
 FILTER_DELAY_MS = 250
+HERE = os.path.dirname(os.path.abspath(__file__))
+CACHE_PATH = os.path.join(HERE, "cache.json")
+SETTINGS_PATH = os.path.join(HERE, "settings.json")
+CACHE_SAVE_SECONDS = 30   # a long search keeps what it read even if the app is closed part-way
+
+
+def load_settings():
+    try:
+        with open(SETTINGS_PATH, encoding="utf-8") as f:
+            settings = json.load(f)
+        return settings if isinstance(settings, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_settings(settings):
+    try:
+        part = SETTINGS_PATH + ".tmp"
+        with open(part, "w", encoding="utf-8") as f:
+            json.dump(settings, f, indent=2)
+        os.replace(part, SETTINGS_PATH)
+    except OSError as e:
+        print(f"could not save the settings: {e}", file=sys.stderr)
 
 
 def make_dpi_aware():
@@ -66,8 +91,11 @@ class Window:
         self.zip_tags = {}         # zip handle -> its tags, kept current after an edit
         self.filter_job = None
         self.zips_done = 0
+        self.zips_cached = 0
         self.zips_total = None
         self.failed = []
+        self.settings = load_settings()
+        self.scanner = None
         self.generation = 0        # bumped per search; updates of an earlier one are dropped
         self.downloads = queue.Queue()
         self.downloading = threading.Event()
@@ -122,6 +150,12 @@ class Window:
         self.extensions_entry.bind("<Return>", lambda e: self.start_search())
         self.search_button = ttk.Button(bar, text="Search", command=self.start_search)
         self.search_button.pack(side="left", padx=(self.px(6), 0))
+        self.clear_button = ttk.Button(bar, text="Clear cache", command=self.clear_cache)
+        self.clear_button.pack(side="right")
+        self.use_cache = tk.BooleanVar(value=bool(self.settings.get("useCache", False)))
+        self.cache_check = ttk.Checkbutton(bar, text="Use cache", variable=self.use_cache,
+                                           command=self.cache_toggled)
+        self.cache_check.pack(side="right", padx=(0, self.px(10)))
 
     def build_summary(self, parent):
         summary = ttk.Frame(parent)
@@ -202,27 +236,37 @@ class Window:
         self.extensions = extensions
         self.rows = []
         self.zips_done = 0
+        self.zips_cached = 0
         self.zips_total = None
         self.failed = []
         self.tree.delete(*self.tree.get_children(""))
         self.update_shown()
         self.note.pack_forget()
-        self.search_button.config(state="disabled")
-        self.extensions_entry.config(state="disabled")
+        for widget in (self.search_button, self.extensions_entry, self.cache_check, self.clear_button):
+            widget.config(state="disabled")
         self.total.config(text=f"Looking for {self.kinds()} files...")
         self.detail.config(text=f"Listing the files in {self.scope()}")
         self.progress.config(mode="indeterminate", value=0)
         self.progress.pack(fill="x", pady=(self.px(8), 0))
         self.progress.start(15)
-        threading.Thread(target=self.scan, args=(self.generation, extensions), daemon=True).start()
+        self.scanner = threading.Thread(target=self.scan, args=(self.generation, extensions, self.use_cache.get()),
+                                        daemon=True)
+        self.scanner.start()
 
     def kinds(self):
         return ", ".join(ext[1:] for ext in self.extensions)
 
-    def scan(self, generation, extensions):
+    def scan(self, generation, extensions, use_cache):
         def put(kind, value):
             self.updates.put((kind, value, generation))
 
+        cache = IndexCache(CACHE_PATH) if use_cache else None
+        try:
+            self.read_zips(put, extensions, cache)
+        finally:
+            self.save_cache(cache)
+
+    def read_zips(self, put, extensions, cache):
         try:
             zips, seen = [], set()
             for folder in self.folders:
@@ -234,9 +278,14 @@ class Window:
                         zips.append(item)
             zips.sort(key=lambda z: z.path.casefold())
             put("zips", len(zips))
+            saved_at = time.monotonic()
             for item in zips:
                 if self.closing.is_set():
                     return
+                entries = cache.get(item.handle, item.mtime, item.size) if cache else None
+                if entries is not None:
+                    put("zip", (item, entries, True))
+                    continue
                 put("reading", item)
                 try:
                     with self.remote(item) as remote:
@@ -251,10 +300,35 @@ class Window:
                 except Exception as e:  # a damaged or non-ZIP archive must not end the scan
                     put("failed", (item, f"{type(e).__name__}: {e}"))
                     continue
-                put("zip", (item, entries))
+                put("zip", (item, entries, False))
+                if cache:
+                    cache.put(item.handle, item.mtime, item.size, entries)
+                    if time.monotonic() - saved_at > CACHE_SAVE_SECONDS:
+                        self.save_cache(cache)
+                        saved_at = time.monotonic()
             put("done", None)
         except RpcError as e:
             put("error", e.message)
+
+    def save_cache(self, cache):
+        if cache is None:
+            return
+        try:
+            cache.save()
+        except OSError as e:
+            print(f"could not save the cache: {e}", file=sys.stderr)
+
+    def cache_toggled(self):
+        self.settings["useCache"] = self.use_cache.get()
+        save_settings(self.settings)
+
+    def clear_cache(self):
+        try:
+            count = IndexCache(CACHE_PATH).clear()
+        except OSError as e:
+            self.status.config(text=f"Could not clear the cache: {e}")
+            return
+        self.status.config(text=f"Cleared the cache of {count:,} archive(s).")
 
     def notify(self, kind, value):
         self.updates.put((kind, value, None))
@@ -307,7 +381,8 @@ class Window:
         else:
             self.update_counts()
 
-    def add_zip(self, item, entries):
+    def add_zip(self, item, entries, cached):
+        self.zips_cached += cached
         self.zip_tags[item.handle] = list(item.tags or [])
         start = len(self.rows)
         self.rows.extend((item, entry) for entry in entries)
@@ -333,12 +408,13 @@ class Window:
             self.detail.config(text=f"No {self.kinds()} file in {self.scope()}.")
         else:
             self.total.config(text=f"{len(self.rows):,} files in {self.zips_total:,} archives")
-            self.detail.config(text=f"Every {self.kinds()} file in {self.scope()} has been read.")
+            cached = f" ({self.zips_cached:,} from the cache)" if self.zips_cached else ""
+            self.detail.config(text=f"Every {self.kinds()} file in {self.scope()} has been read{cached}.")
         self.enable_search()
 
     def enable_search(self):
-        self.search_button.config(state="normal")
-        self.extensions_entry.config(state="normal")
+        for widget in (self.search_button, self.extensions_entry, self.cache_check, self.clear_button):
+            widget.config(state="normal")
 
     def stop_progress(self):
         self.progress.stop()
@@ -511,7 +587,7 @@ class Window:
                 target = unique_path(folder, safe_file_name(entry.name))
                 part = target + ".part"
                 with open(part, "wb") as out:
-                    done = extract(remote, entry.info, out, self.closing.is_set)
+                    done = extract(remote, entry.offset, out, self.closing.is_set)
                 if not done:
                     return None
                 # Another save may have taken the name while this one ran.
@@ -579,6 +655,9 @@ class TagDialog:
 def search(ctx):
     window = Window(ctx)
     window.run()
+    # The reading thread saves what it read into the cache on its way out.
+    if window.scanner is not None:
+        window.scanner.join(timeout=5)
     # A download writing its file stops at the next chunk and removes its .part; one
     # still waiting on MEGA has written nothing yet and is left to die with the process.
     window.saver.join(timeout=5)

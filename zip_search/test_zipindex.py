@@ -5,7 +5,7 @@ import tempfile
 import unittest
 import zipfile
 
-from zipindex import (BLOCK, READ_LIMIT, RemoteFile, clean_tags, display_name, extract, filter_terms,
+from zipindex import (BLOCK, READ_LIMIT, IndexCache, RemoteFile, clean_tags, display_name, extract, filter_terms,
                       format_size, has_extension, list_entries, matches, parse_extensions, safe_file_name,
                       tag_changes, tag_filter_terms, tags_match, unique_path)
 
@@ -122,7 +122,7 @@ class DisplayNameTest(unittest.TestCase):
     def test_a_cp932_entry_still_extracts(self):
         info, data = self.flagless("あ.txt".encode("cp932"))
         out = io.BytesIO()
-        self.assertTrue(extract(FakeMega(data).remote(), info, out))
+        self.assertTrue(extract(FakeMega(data).remote(), info.header_offset, out))
         self.assertEqual(out.getvalue(), b"content")
 
 
@@ -132,7 +132,7 @@ class ExtractTest(unittest.TestCase):
         mega.reads.clear()
         out = io.BytesIO()
         with mega.remote() as remote:
-            self.assertTrue(extract(remote, entry.info, out))
+            self.assertTrue(extract(remote, entry.offset, out))
         return out.getvalue()
 
     def test_stored_and_deflated(self):
@@ -160,7 +160,68 @@ class ExtractTest(unittest.TestCase):
         mega = FakeMega(make_zip({"big.bin": bytes(3 * READ_LIMIT)}, zipfile.ZIP_STORED))
         entry = list_entries(mega.remote())[0]
         with mega.remote() as remote:
-            self.assertFalse(extract(remote, entry.info, io.BytesIO(), lambda: True))
+            self.assertFalse(extract(remote, entry.offset, io.BytesIO(), lambda: True))
+
+
+class IndexCacheTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.path = os.path.join(self.tmp.name, "cache.json")
+        self.entries = list_entries(FakeMega(make_zip({"a.txt": b"a", "dir/b.txt": b"bb"})).remote())
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_kept_across_saves_while_mtime_and_size_match(self):
+        cache = IndexCache(self.path)
+        cache.put("h1", 100, 2000, self.entries)
+        cache.save()
+        again = IndexCache(self.path)
+        self.assertEqual(again.get("h1", 100, 2000), self.entries)
+        self.assertIsNone(again.get("h1", 101, 2000))
+        self.assertIsNone(again.get("h1", 100, 2001))
+        self.assertIsNone(again.get("h2", 100, 2000))
+
+    def test_cached_entries_still_extract(self):
+        data = make_zip({"a.txt": b"first", "b.txt": b"second"})
+        cache = IndexCache(self.path)
+        cache.put("h", 1, len(data), list_entries(FakeMega(data).remote()))
+        cache.save()
+        entry = IndexCache(self.path).get("h", 1, len(data))[1]
+        out = io.BytesIO()
+        self.assertTrue(extract(FakeMega(data).remote(), entry.offset, out))
+        self.assertEqual(out.getvalue(), b"second")
+
+    def test_an_unknown_mtime_is_never_cached(self):
+        cache = IndexCache(self.path)
+        cache.put("h", None, 10, self.entries)
+        self.assertIsNone(cache.get("h", None, 10))
+
+    def test_two_windows_keep_each_other_s_indexes(self):
+        first, second = IndexCache(self.path), IndexCache(self.path)
+        first.put("h1", 1, 1, self.entries)
+        second.put("h2", 2, 2, self.entries)
+        first.save()
+        second.save()
+        both = IndexCache(self.path)
+        self.assertIsNotNone(both.get("h1", 1, 1))
+        self.assertIsNotNone(both.get("h2", 2, 2))
+
+    def test_a_damaged_file_is_an_empty_cache(self):
+        for content in ("{not json", "[]", '{"version": 99, "zips": {}}'):
+            with open(self.path, "w", encoding="utf-8") as f:
+                f.write(content)
+            self.assertIsNone(IndexCache(self.path).get("h", 1, 1))
+
+    def test_clear(self):
+        cache = IndexCache(self.path)
+        cache.put("h1", 1, 1, self.entries)
+        cache.put("h2", 2, 2, self.entries)
+        cache.save()
+        self.assertEqual(IndexCache(self.path).clear(), 2)
+        self.assertFalse(os.path.exists(self.path))
+        self.assertIsNone(IndexCache(self.path).get("h1", 1, 1))
+        self.assertEqual(IndexCache(self.path).clear(), 0)
 
 
 class HelpersTest(unittest.TestCase):

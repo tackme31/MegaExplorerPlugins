@@ -1,8 +1,9 @@
 """The part of ZIP Search that needs no window: reading a ZIP's index and one of its
-entries through byte-range reads, entry-name decoding, the name filter, and naming
-the saved file. main.py holds the window.
+entries through byte-range reads, entry-name decoding, the name filter, naming
+the saved file, and the cache of indexes read before. main.py holds the window.
 """
 
+import json
 import os
 import re
 import struct
@@ -143,11 +144,7 @@ class Entry:
     path: str        # folder inside the ZIP, "" at its top, no trailing "/"
     name: str
     size: int
-    info: zipfile.ZipInfo
-
-    @property
-    def encrypted(self):
-        return bool(self.info.flag_bits & 0x1)
+    offset: int      # its local header's offset, which identifies it even among duplicate names
 
 
 def display_name(info):
@@ -183,14 +180,17 @@ def list_entries(remote):
             if not full or full.endswith("/"):
                 continue
             folder, _, name = full.rpartition("/")
-            entries.append(Entry(folder, name, info.file_size, info))
+            entries.append(Entry(folder, name, info.file_size, info.header_offset))
         return entries
 
 
-def extract(remote, info, out, cancelled=lambda: False):
-    """Writes the entry info of the ZIP read through remote to the binary file out.
-    Returns False if cancelled() turned true part-way."""
+def extract(remote, offset, out, cancelled=lambda: False):
+    """Writes the entry whose local header is at offset in the ZIP read through remote
+    to the binary file out. Returns False if cancelled() turned true part-way."""
     with zipfile.ZipFile(remote) as archive:
+        info = next((i for i in archive.infolist() if i.header_offset == offset), None)
+        if info is None:
+            raise zipfile.BadZipFile("the file is no longer in the ZIP")
         remote.seek(info.header_offset)
         header = remote.read(30)
         if len(header) != 30 or header[:4] != b"PK\x03\x04":
@@ -309,3 +309,66 @@ def parse_extensions(text):
 
 def has_extension(name, extensions):
     return name.casefold().endswith(tuple(extensions))
+
+
+class IndexCache:
+    """ZIP indexes read before, by MEGA handle, in one JSON file. An index is used only
+    while the ZIP's mtime and size are still the ones it was read at."""
+
+    VERSION = 1
+
+    def __init__(self, path):
+        self.path = path
+        self.zips = self._read()
+        self.added = {}
+
+    def _read(self):
+        try:
+            with open(self.path, encoding="utf-8") as f:
+                data = json.load(f)
+            if data.get("version") == self.VERSION and isinstance(data.get("zips"), dict):
+                return data["zips"]
+        except (OSError, ValueError, AttributeError):
+            pass
+        return {}
+
+    def get(self, handle, mtime, size):
+        record = self.zips.get(handle)
+        if not record or mtime is None or record.get("mtime") != mtime or record.get("size") != size:
+            return None
+        try:
+            return [Entry(*fields) for fields in record["entries"]]
+        except (KeyError, TypeError):
+            return None
+
+    def put(self, handle, mtime, size, entries):
+        if mtime is None:
+            return
+        record = {"mtime": mtime, "size": size,
+                  "entries": [[e.path, e.name, e.size, e.offset] for e in entries]}
+        self.zips[handle] = record
+        self.added[handle] = record
+
+    def save(self):
+        """Writes what was added since the last save, over what is on disk now, so two
+        windows searching at once do not drop each other's indexes."""
+        if not self.added:
+            return
+        zips = self._read()
+        zips.update(self.added)
+        part = self.path + ".tmp"
+        with open(part, "w", encoding="utf-8") as f:
+            json.dump({"version": self.VERSION, "zips": zips}, f, ensure_ascii=False, separators=(",", ":"))
+        os.replace(part, self.path)
+        self.zips = zips
+        self.added = {}
+
+    def clear(self):
+        """Forgets every index. Returns how many ZIPs were in the cache."""
+        count = len(self._read().keys() | self.zips.keys())
+        self.zips, self.added = {}, {}
+        try:
+            os.remove(self.path)
+        except FileNotFoundError:
+            pass
+        return count
