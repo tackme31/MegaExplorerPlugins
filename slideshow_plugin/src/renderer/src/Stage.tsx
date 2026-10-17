@@ -55,8 +55,8 @@ function Layer(props: { slide: Slide; entering: boolean; fit: Fit; transition: T
       ? 'h-full w-full object-cover'
       : props.fit === 'actual'
         ? 'max-w-none'
-        : // max-* rather than w/h-full: an image smaller than the window stays at its own size.
-          'max-h-full max-w-full object-contain'
+        : // Fit scales small images up too: the box is the whole window, the image touches two sides.
+          'h-full w-full object-contain'
   return (
     <div ref={ref} className="absolute inset-0 flex items-center justify-center overflow-hidden">
       <img src={props.slide.src} className={`${image} select-none`} draggable={false} alt="" />
