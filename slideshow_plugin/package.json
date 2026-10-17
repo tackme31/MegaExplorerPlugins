@@ -10,7 +10,8 @@
   "scripts": {
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "pack": "electron-vite build && electron-builder --dir"
+    "pack": "electron-vite build && electron-builder --dir",
+    "package": "node scripts/package.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -20,6 +20,7 @@ and its own README (features, installation, building) and LICENSE. `README.md` h
 | `wdtagsearch_plugin/` | WD Tag Search: builds a `tag:` query over WD Tagger's tags, with suggestions and a match count, and runs it in the app. Read-only. | Python / uv |
 | `dupfinder_plugin/` | Duplicate Finder: groups the files under a folder by size and MEGA's content checksum (`crc`) and lists the duplicates. Read-only. | Python / uv |
 | `zip_search/` | ZIP Search: lists the files inside every ZIP under a folder, filterable, and saves one file out of its ZIP. | Python / uv |
+| `slideshow_plugin/` | Slideshow: plays a folder's images in its own window, sorted and filtered, streamed through `items.streamUrl`. Read-only. | TypeScript / Electron + React |
 
 Branch `main` only, pushed to `origin` (GitHub); pushing it is fine. Releases are zips of one
 plugin folder, published as GitHub releases by `/release` (`.claude/skills/release/`).
@@ -145,6 +146,26 @@ uv run python -m unittest
 - Edits the ZIP's own MEGA tags (`items.update`, permission `items.edit`); only the difference is
   sent, so a change of case alone is no change (MEGA matches tags ignoring case).
 - The folder name has no `_plugin` suffix because the user named it so.
+
+## slideshow_plugin (TypeScript / Electron + React)
+
+```
+npm ci
+npm run typecheck
+npm run pack       # bin/win-unpacked/, which plugin.json starts
+npm run package    # the same + ../dist/Slideshow-<version>.zip
+```
+
+- `plugin.json` starts `bin/win-unpacked/Slideshow.exe`, so the app runs what `npm run pack` last
+  built. `bin/`, `out/`, `node_modules/` and the plugin's own `settings.json` are gitignored.
+  The version lives only in `plugin.json`; `npm run package` stamps it on the exe.
+- Needs MEGA Explorer's `items.streamUrl` (permission `content.stream`); an older app rejects the
+  manifest. Each shown image is one read from MEGA; the renderer loads at most two ahead, one at
+  a time.
+- stdin is read through a `net.Socket` on fd 0 (`src/main/rpc.ts` says why). Electron prints one
+  empty line on stdout at startup, which the app logs as a non-JSON line; harmless.
+- `scripts/stdio_probe.mjs` drives the exe over piped stdio like the app does.
+- No `docs/SPEC.md` by decision: the reasons live in code comments.
 
 ## Writing docs and commits
 
