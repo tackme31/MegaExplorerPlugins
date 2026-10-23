@@ -18,6 +18,7 @@ and its own README (features, installation, building) and LICENSE. `README.md` h
 | `dirstat_plugin/` | MegaDirStat: size tree + treemap of a folder, in its own window. Read-only. | C++20 / Qt 6 Widgets |
 | `wdtagger_plugin/` | WD Tagger: tags images/videos with a WD14 model on the GPU, as MEGA tags | Python / uv |
 | `wdtagsearch_plugin/` | WD Tag Search: builds a `tag:` query over WD Tagger's tags, with suggestions and a match count, and runs it in the app. Read-only. | Python / uv |
+| `wdsimilar_plugin/` | WD Similar: lists the files whose WD Tagger tags are most like a chosen file's, with thumbnails, in a window that stays open and searches the app's selection. Read-only. | Python / uv |
 | `dupfinder_plugin/` | Duplicate Finder: groups the files under a folder by size and MEGA's content checksum (`crc`) and lists the duplicates. Read-only. | Python / uv |
 | `zip_search/` | ZIP Search: lists the files inside every ZIP under a folder, filterable, and saves one file out of its ZIP. | Python / uv |
 | `slideshow_plugin/` | Slideshow: plays a folder's images in its own window, sorted and filtered, streamed through `items.streamUrl`. Read-only. | TypeScript / Electron + React |
@@ -115,6 +116,23 @@ uv run python -m unittest
   suggestions, match count, query text), `main.py` the window and the counting thread.
 - The match count must follow MEGA Explorer's search rule exactly; `docs/SPEC.md` (Japanese) says
   which rule and why each deviation was closed. Read it before changing behaviour.
+
+## wdsimilar_plugin (Python / uv)
+
+```
+uv run python -m unittest
+```
+
+- Pillow (thumbnails are JPEG, which Tk cannot read); the window is tkinter. `similar.py` is the
+  testable part (words of a file's `wd:`/`chara:` tags, ranking, copy fingerprint), `main.py` the
+  window, the listing/ranking thread and the one thumbnail thread.
+- Words are weighted by IDF and by where they sit in their tag (WD Tagger writes best first): 1.0
+  for the first word falling to 0.5 for the last, on both sides of the cosine. An unweighted
+  version was tried first and lost clearly on real use.
+- The window stays open (`"progress": "never"`), so the drive is listed once, from memory, and the
+  index is not persisted. Further searches take the app's selection through `ui.selection`;
+  **Rebuild index** re-lists. Thumbnails come through `items.fetchThumbnail` one at a time, only
+  for rows shown. Needs a MEGA Explorer with both methods.
 
 ## dupfinder_plugin (Python / uv)
 
