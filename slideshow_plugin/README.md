@@ -25,7 +25,7 @@ Right-click a folder → **Slideshow** → **This folder only** or **Including s
 ## Requirements
 
 - Windows 10 or 11, 64-bit.
-- MEGA Explorer with `items.streamUrl` (an older version does not load the plugin).
+- MEGA Explorer 0.6.0 or later (an older version does not load the plugin).
 
 ## Installation
 
