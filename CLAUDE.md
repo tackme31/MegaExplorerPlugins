@@ -1,7 +1,10 @@
 # CLAUDE.md
 
 **Talk to the user in Japanese** — every reply, question and summary. Code, code comments, commit
-messages and the plugins' READMEs stay in English.
+messages and the plugins' READMEs stay in English. This holds for the **whole** session: the
+short progress notes between tool calls, the status after a background build, and the summary
+that follows a long stretch of English code or commit messages are where the reply has slipped
+into English before — check the language of every message, not only the first.
 
 **Change no code until the user explicitly asks for it to be implemented.** A question ("can
 we…?"), a report of a problem, or agreement with an analysis asks for an answer: answer, propose,
