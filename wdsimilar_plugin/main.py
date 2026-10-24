@@ -25,6 +25,9 @@ TOOLTIP_DELAY = 400  # ms
 RESIZE_DELAY = 150   # ms of no resizing before the thumbnails are scaled again
 PLACEHOLDER = "#d9d9d9"
 SELECTED = "#0078d4"
+# The app's thumbnail service runs 4 fetches at once; more workers only queue there,
+# past the point where a stale request could still be skipped.
+THUMB_WORKERS = 4
 
 
 def make_dpi_aware():
@@ -110,7 +113,8 @@ class Window:
         self.build_grid(frame)
         self.tooltip = Tooltip(self.root)
 
-        threading.Thread(target=self.fetch_thumbnails, daemon=True).start()
+        for _ in range(THUMB_WORKERS):
+            threading.Thread(target=self.fetch_thumbnails, daemon=True).start()
         self.set_query(item)
         self.start_listing()
         self.root.after(100, self.poll)
@@ -447,7 +451,7 @@ class Window:
                 f"{len(match.shared)}/{match.terms} words shared")
         self.tooltip.show(text, *self.pointer)
 
-    # --- thumbnails, one at a time off the UI thread ----------------------------------
+    # --- thumbnails, THUMB_WORKERS at a time off the UI thread ----------------------------------
 
     def fetch_thumbnails(self):
         while not self.closing.is_set():
