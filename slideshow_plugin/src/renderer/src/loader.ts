@@ -9,6 +9,7 @@
 // instead of requesting it again.
 
 import { Item } from '@shared/types'
+import { api } from './api'
 
 export const PREFETCH = 2
 const TIMEOUT_MS = 10_000
@@ -27,7 +28,7 @@ export class ImageLoader {
     if (existing) return existing.promise
     const entry = {} as Entry
     entry.promise = (async () => {
-      const url = await window.slideshow.streamUrl(item.handle)
+      const url = await api.streamUrl(item.handle)
       const image = new Image()
       entry.image = image
       image.src = url

@@ -12,6 +12,7 @@ import { buildPlaylist, formatDate, formatSize, shortTag } from './playlist'
 import { ImageLoader } from './loader'
 import { Slide, Stage } from './Stage'
 import { SettingsPanel } from './SettingsPanel'
+import { api, inBrowser } from './api'
 
 const IDLE_MS = 2500
 const TITLE_BAR = 36
@@ -74,7 +75,7 @@ export function App() {
   const failures = useRef(0)
 
   useEffect(() => {
-    window.slideshow.loadSession().then(
+    api.loadSession().then(
       (s) => {
         setSession(s)
         setSettings(s.settings)
@@ -86,7 +87,7 @@ export function App() {
   // Saved a moment after the last change, so dragging a slider writes the file once.
   useEffect(() => {
     if (!settings) return
-    const t = window.setTimeout(() => window.slideshow.saveSettings(settings), 400)
+    const t = window.setTimeout(() => api.saveSettings(settings), 400)
     return () => window.clearTimeout(t)
   }, [settings])
 
@@ -122,7 +123,7 @@ export function App() {
         return
       }
       if (auto && s.atEnd === 'close') {
-        window.slideshow.close()
+        api.close()
         return
       }
       if (s.sortKey === 'random') {
@@ -189,7 +190,8 @@ export function App() {
 
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) void document.exitFullscreen()
-    else void document.documentElement.requestFullscreen()
+    // iPhone Safari has no Fullscreen API outside <video>.
+    else void document.documentElement.requestFullscreen?.()
   }, [])
   useEffect(() => {
     const onChange = (): void => setFullscreen(document.fullscreenElement !== null)
@@ -276,21 +278,37 @@ export function App() {
     advance(e.deltaY > 0 ? 1 : -1, false)
   }
 
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const onTouchStart = (e: React.TouchEvent): void => {
+    const t = e.touches[0]
+    touchStart.current = t ? { x: t.clientX, y: t.clientY } : null
+    wake()
+  }
+  const onTouchEnd = (e: React.TouchEvent): void => {
+    const start = touchStart.current
+    const t = e.changedTouches[0]
+    touchStart.current = null
+    if (!start || !t || panelOpen) return
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) advance(dx < 0 ? 1 : -1, false)
+  }
+
   // The cursor and the edge arrows still hide when the mouse rests, even with the chrome pinned.
   const awake = active || hoveringControls || panelOpen
   const showChrome = awake || settings?.chrome === 'always'
-  const top = fullscreen ? 0 : TITLE_BAR
+  const top = fullscreen || inBrowser ? 0 : TITLE_BAR
   const shown = playlist.find((item) => item.handle === shownHandle) ?? null
 
   return (
     <div className={`fixed inset-0 overflow-hidden bg-black text-white ${awake ? '' : 'cursor-none'}`} onMouseMove={wake}>
-      {!fullscreen && (
+      {!fullscreen && !inBrowser && (
         <div className="drag fixed inset-x-0 top-0 z-40 flex items-center pl-4 text-[12px] text-white/45" style={{ height: TITLE_BAR }}>
           <span className="truncate pr-40">{session ? session.scope : 'Slideshow'}</span>
         </div>
       )}
 
-      <main className="absolute inset-x-0 bottom-0" style={{ top }} onWheel={onWheel}>
+      <main className="absolute inset-x-0 bottom-0" style={{ top }} onWheel={onWheel} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {settings && (
           <Stage
             current={slides.current}
@@ -348,7 +366,7 @@ export function App() {
               showChrome ? 'opacity-100' : 'opacity-0'
             }`}
           >
-            <div className="max-w-[40%] space-y-1">
+            <div className="max-w-[90%] space-y-1 pb-14 sm:max-w-[40%] sm:pb-0">
               <p className="truncate text-[14px] font-medium">{shown.name}</p>
               <p className="text-[12px] text-white/55 tabular-nums">
                 {index + 1} / {playlist.length} · {formatDate(shown.mtime)} · {formatSize(shown.size)}
@@ -390,7 +408,7 @@ export function App() {
               {settings.intervalSec.toFixed(1)} s
             </span>
             <div className="mx-1 h-5 w-px bg-white/10" />
-            <IconButton title="Show in MEGA Explorer" onClick={() => shown && void window.slideshow.reveal(shown.handle)}>
+            <IconButton title="Show in MEGA Explorer" onClick={() => shown && void api.reveal(shown.handle)}>
               <FolderSearch size={17} />
             </IconButton>
             <IconButton title="Settings (S)" onClick={() => setPanelOpen((p) => !p)} active={panelOpen}>

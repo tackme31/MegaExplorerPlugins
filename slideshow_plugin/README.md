@@ -18,6 +18,14 @@ Right-click a folder → **Slideshow** → **This folder only** or **Including s
 | + / − | Show each image longer / shorter |
 | S | Settings |
 
+### On a phone
+
+**On a phone: this folder only** / **On a phone: including subfolders** opens a small window with a
+QR code instead. Scan it with a phone on the same network to run the slideshow in the phone's
+browser (swipe for previous / next). Images are passed through the PC, which must keep MEGA
+Explorer running; closing that window stops it. Windows may ask once to allow Slideshow through
+the firewall — allow it on private networks. The link holds a key that changes on every run.
+
 - JPEG, PNG, WebP, GIF, AVIF and BMP are shown; HEIC, TIFF, RAW and PSD are not.
 - The settings are saved in `settings.json` in the plugin's folder, so replacing the folder with
   a new version resets them.

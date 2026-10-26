@@ -9,7 +9,9 @@
 import { app, BrowserWindow, ipcMain, Menu, screen } from 'electron'
 import { readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import QRCode from 'qrcode'
 import { Rpc } from './rpc'
+import { startWebServer } from './web'
 import { extensionOf, IMAGE_EXTENSIONS, Item, mergeSettings, Session, Settings } from '../shared/types'
 
 interface ContextItem {
@@ -20,7 +22,7 @@ interface ContextItem {
 }
 
 interface ExecuteParams {
-  commandId: 'this-folder' | 'subfolders'
+  commandId: 'this-folder' | 'subfolders' | 'phone-this-folder' | 'phone-subfolders'
   context: { site: string; items: ContextItem[] }
 }
 
@@ -73,7 +75,7 @@ const FIELDS = ['name', 'size', 'mtime', 'path', 'tags', 'favourite']
 const SUPPORTED = new Set<string>(IMAGE_EXTENSIONS)
 
 async function listImages(params: ExecuteParams): Promise<Session> {
-  const method = params.commandId === 'this-folder' ? 'items.children' : 'items.descendants'
+  const method = params.commandId.endsWith('this-folder') ? 'items.children' : 'items.descendants'
   const folders = params.context.items.filter((item) => item.type === 'folder')
   const seen = new Set<string>()
   const items: Item[] = []
@@ -147,7 +149,7 @@ function openWindow(title: string, onClosed: () => void): void {
 
 ipcMain.handle('load-session', () => session)
 
-ipcMain.handle('stream-url', async (_event, handle: string) => {
+async function streamUrlFor(handle: string): Promise<string> {
   const cached = urls.get(handle)
   if (cached) return cached
   const result = await rpc.call<{ urls: { url?: string; error?: { message: string } }[] }>('items.streamUrl', {
@@ -157,17 +159,21 @@ ipcMain.handle('stream-url', async (_event, handle: string) => {
   if (!entry?.url) throw new Error(entry?.error?.message ?? 'No URL')
   urls.set(handle, entry.url)
   return entry.url
-})
+}
+
+function saveSettingsFrom(next: unknown): void {
+  // The window state is the main process's to record; keep it from the renderer's copy.
+  settings = { ...mergeSettings(next), window: settings.window }
+  writeSettings()
+}
+
+ipcMain.handle('stream-url', (_event, handle: string) => streamUrlFor(handle))
 
 ipcMain.handle('reveal', async (_event, handle: string) => {
   await rpc.call('ui.reveal', { handle })
 })
 
-ipcMain.on('save-settings', (_event, next: Settings) => {
-  // The window state is the main process's to record; keep it from the renderer's copy.
-  settings = { ...mergeSettings(next), window: settings.window }
-  writeSettings()
-})
+ipcMain.on('save-settings', (_event, next: Settings) => saveSettingsFrom(next))
 
 ipcMain.on('close', () => window?.close())
 
@@ -178,12 +184,54 @@ rpc.on('initialize', (params) => {
   return { apiVersion: 1 }
 })
 
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
+}
+
+// Phone mode: the slideshow runs in a browser on the LAN; the PC shows only where to point it.
+// Closing that window stops the server and ends the command.
+async function servePhone(): Promise<void> {
+  const server = await startWebServer(join(__dirname, '../renderer'), {
+    session: () => session!,
+    streamUrl: streamUrlFor,
+    reveal: async (handle) => {
+      await rpc.call('ui.reveal', { handle })
+    },
+    saveSettings: saveSettingsFrom
+  })
+  process.stderr.write(`phone mode listening: ${server.urls.join(' ')}
+`)
+  const first = server.urls[0]
+  const qr = first ? await QRCode.toDataURL(first, { margin: 1, width: 260 }) : ''
+  const links = server.urls.map((u) => `<p><code>${escapeHtml(u)}</code></p>`).join('')
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Slideshow on phone</title>
+<style>body{margin:0;padding:20px;background:#111;color:#ddd;font:13px system-ui,sans-serif;text-align:center}
+img{background:#fff;border-radius:6px}code{user-select:all;word-break:break-all;color:#fff}p{margin:6px 0}</style></head>
+<body>${first ? `<img src="${qr}" width="260" height="260"><p>Scan this with a phone on the same network, or open:</p>${links}`
+    : '<p>No network address found.</p>'}
+<p style="color:#888;margin-top:14px">Close this window to stop.</p></body></html>`
+  const win = new BrowserWindow({ width: 380, height: 520, title: 'Slideshow on phone', backgroundColor: '#111111', resizable: false })
+  window = win
+  await new Promise<void>((resolve) => {
+    win.on('closed', () => {
+      window = null
+      server.close()
+      resolve()
+    })
+    void win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html))
+  })
+}
+
 rpc.on('command.execute', async (params) => {
   const execute = params as ExecuteParams
   await app.whenReady()
   session = listImages(execute)
   // Keeps an unhandled-rejection warning out of the log; the renderer gets the error.
   session.catch(() => {})
+  if (execute.commandId.startsWith('phone-')) {
+    await servePhone()
+    return {}
+  }
   const title = execute.commandId === 'this-folder' ? 'Slideshow' : 'Slideshow (including subfolders)'
   await new Promise<void>((resolve) => openWindow(title, resolve))
   return {}

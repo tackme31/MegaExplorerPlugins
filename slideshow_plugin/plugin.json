@@ -9,6 +9,8 @@
   "permissions": ["items.read", "content.stream"],
   "commands": [
     { "id": "this-folder", "title": "This folder only", "progress": "never", "when": { "targets": "folders" } },
-    { "id": "subfolders", "title": "Including subfolders", "progress": "never", "when": { "targets": "folders" } }
+    { "id": "subfolders", "title": "Including subfolders", "progress": "never", "when": { "targets": "folders" } },
+    { "id": "phone-this-folder", "title": "On a phone: this folder only", "progress": "never", "when": { "targets": "folders" } },
+    { "id": "phone-subfolders", "title": "On a phone: including subfolders", "progress": "never", "when": { "targets": "folders" } }
   ]
 }

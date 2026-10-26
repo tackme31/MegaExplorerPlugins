@@ -154,7 +154,7 @@ export function SettingsPanel({ settings, items, matchCount, onChange, onClose }
 
   return (
     <aside
-      className="absolute top-0 right-0 bottom-0 z-30 flex w-[340px] flex-col border-l border-white/8 bg-neutral-950/80 shadow-2xl backdrop-blur-xl"
+      className="absolute top-0 right-0 bottom-0 z-30 flex w-[340px] max-w-full flex-col border-l border-white/8 bg-neutral-950/80 shadow-2xl backdrop-blur-xl"
       onMouseDown={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
