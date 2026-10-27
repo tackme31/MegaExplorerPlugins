@@ -161,7 +161,7 @@ class Window:
         self.more_button.pack(side="left")
         self.count = ttk.Label(bar, text="", foreground="gray40")
         self.count.pack(side="left", padx=(self.px(10), 0))
-        ttk.Label(bar, text="Double-click to show a file in MEGA Explorer; right-click to search from it",
+        ttk.Label(bar, text="Double-click to open a file in MEGA Explorer; right-click to search from it",
                   foreground="gray40").pack(side="right")
 
     def build_grid(self, parent):
@@ -421,7 +421,7 @@ class Window:
         self.menu.tk_popup(event.x_root, event.y_root)
 
     def on_double_click(self, event):
-        self.reveal(self.tile_at(event))
+        self.open(self.tile_at(event))
 
     # --- tooltip ----------------------------------------------------------------------
 
@@ -484,6 +484,15 @@ class Window:
             self.canvas.tag_raise("selection")
 
     # --- showing a file in the app ----------------------------------------------------
+
+    def open(self, number):
+        if number is None:
+            return
+        match = self.tiles[number]
+        try:
+            self.ctx.open(match.handle)
+        except RpcError as e:
+            self.status.config(text=f"Could not open {match.path}: {e.message}")
 
     def reveal(self, number):
         if number is None:
