@@ -30,8 +30,11 @@ WD14 系のタグ付けモデル（ONNX）で MEGA 上の画像・動画を推�
 - メニューの出し分けは manifest の `when.targets` で行う。Tag selected / Retag selected は `"targets": "files"`、
   Tag all in folder / Retag all in folder は `"targets": "folders"`。**`extensions` は書かない**: 書くと画像と PDF を
   混ぜて選んだときに項目ごと灰色になるので、押せるようにしておき、画像・動画以外はプラグイン側でスキップする
-- 結果は全コマンドとも `"result": "dialog"`。進捗ダイアログがそのまま結果表示に変わり、閉じるまで残る。
-  1 行目が要約（例: `Tagged 120, 8 without a preview, 2 failed`）、その下に失敗とプレビューなしの一覧（パス付き）
+- 結果は全コマンドとも結果ダイアログ（`ui.showResult`）に出す。進捗ダイアログを閉じてから出し、閉じるまで残る
+  （プラグイン API 2 から。API 1 では manifest の `"result": "dialog"` で、進捗ダイアログがそのまま結果表示に変わっていた）。
+  1 行目が要約（例: `Tagged 120, 8 without a preview, 2 failed`）、その下に失敗とプレビューなしの一覧（パス付き）。
+  失敗があれば `kind: "warning"`。「Nothing to tag」も同じく結果ダイアログに出す。CUDA が使えないときの説明は
+  `kind: "error"` の結果ダイアログで全文を出す（エラー応答にするとトーストで数行に切られるため）
 - 動画もプレビュー（MEGA が持つ代表フレームの JPEG）で推論する。動画をダウンロードしてフレームを抜く、
   ということはしない
 - **推論タグ（`wd:` タグ）がすでにあるアイテムはスキップする**
@@ -70,12 +73,14 @@ WD14 系のタグ付けモデル（ONNX）で MEGA 上の画像・動画を推�
 
 - モデルは `SmilingWolf/wd-eva02-large-tagger-v3`（約 1.2 GB）。置き場所は **HF のキャッシュ**
   （`~/.cache/huggingface`）のまま。初回の実行で Hugging Face から取得する
-- 進捗は 1 つのダイアログの中で段階が切り替わる（`ui.progress` は通知ごとに表示を置き換えるので、
-  アプリ側の変更は要らない）
-  1. モデルのダウンロード（キャッシュにあれば飛ばす）: `Downloading model (first run only)`、件数は **MB**
-     （ダイアログは `current / total` を単位なしで出すため。単位の指定は §6-10）
-  2. モデルの読み込み: `Loading model…`、`total` を省いて不定の表示
-  3. タグ付け: `Tagging…`、件数はアイテム数
+- 進捗は 1 つのダイアログの中で段階が切り替わる。manifest は `progressDialog` を既定（`true`）のままにし、
+  開始時に開いている進捗ダイアログを `ui.updateProgress` で段階ごとに書き換える（見出しは `title`）
+  1. 配下の一覧（フォルダのコマンドのみ）: `Listing files`、`detail` に見つかった数、バーは不定
+  2. モデルのダウンロード（キャッシュにあれば飛ばす）: `Downloading model (first run only)`、`detail` は **MB**
+  3. モデルの読み込み: `Loading model`、バーは不定
+  4. タグ付け: `Tagging`、バーは件数の割合、`detail` に「件数 / 総数  ~残り時間」。残り時間は**タグ付けを
+     始めてからの速さ**で出す（一覧とモデル読み込みを含めると最初の見積もりが長すぎるため。API 1 の
+     `"show": ["count", "remaining"]` に当たる）
 - ダウンロード中はキャンセルできない（終わるまで戻らない）。問題があれば後で別スレッド化する
 - onnxruntime-gpu は **1.23.2 に固定**。1.24 以降は CUDA 13 向けのビルドで、CUDA 12 の環境では CUDA プロバイダを読めず黙って CPU になる
 - 設定（モデル・閾値）は**プラグインフォルダの `config.json`**。アプリは場所を決めない（v1 の方針どおり）
