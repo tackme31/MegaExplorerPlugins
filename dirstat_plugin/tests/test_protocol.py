@@ -62,7 +62,7 @@ class Host:
         raise AssertionError(f"unexpected message: {message}")
 
     def initialize(self):
-        self.request(1, "initialize", {"apiVersion": 1})
+        self.request(1, "initialize", {"apiVersion": 2})
         return self.next()
 
     def execute(self, items):
@@ -102,14 +102,14 @@ class ProtocolTest(unittest.TestCase):
         self.addCleanup(self.host.close)
 
     def test_initialize_then_shutdown_exits_cleanly(self):
-        self.assertEqual(self.host.initialize()["result"], {"apiVersion": 1})
+        self.assertEqual(self.host.initialize()["result"], {"apiVersion": 2})
         response, code = self.host.shutdown()
         self.assertEqual(response, {"jsonrpc": "2.0", "id": 3, "result": {}})
         self.assertEqual(code, 0)
 
     def test_initialize_accepts_the_app_colour_scheme(self):
-        self.host.request(1, "initialize", {"apiVersion": 1, "app": {"colorScheme": "dark"}})
-        self.assertEqual(self.host.next()["result"], {"apiVersion": 1})
+        self.host.request(1, "initialize", {"apiVersion": 2, "app": {"colorScheme": "dark"}})
+        self.assertEqual(self.host.next()["result"], {"apiVersion": 2})
         self.assertEqual(self.host.shutdown()[1], 0)
 
     def test_exits_when_stdin_closes(self):

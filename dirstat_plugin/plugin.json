@@ -3,14 +3,14 @@
   "name": "MegaDirStat",
   "version": "0.1.0",
   "description": "Shows what takes up the space in a folder, as a size-sorted tree and a treemap.",
-  "apiVersion": 1,
+  "apiVersion": 2,
   "run": { "command": "bin/MegaDirStatPlugin.exe" },
   "permissions": ["items.read"],
   "commands": [
     {
       "id": "show",
       "title": "Show folder sizes",
-      "progress": "never",
+      "progressDialog": false,
       "when": { "targets": "folders" }
     }
   ]

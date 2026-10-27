@@ -4,10 +4,10 @@
   "name": "ZIP Search",
   "version": "0.1.0",
   "description": "Lists the files inside every ZIP under a folder, with a name filter, and saves a single file out of its ZIP without downloading the whole archive.",
-  "apiVersion": 1,
+  "apiVersion": 2,
   "run": { "command": "uv", "args": ["run", "--quiet", "main.py"] },
   "permissions": ["items.read", "items.edit", "content.read"],
   "commands": [
-    { "id": "search", "title": "List files in ZIPs...", "progress": "never", "when": { "targets": "folders" } }
+    { "id": "search", "title": "List files in ZIPs...", "progressDialog": false, "when": { "targets": "folders" } }
   ]
 }

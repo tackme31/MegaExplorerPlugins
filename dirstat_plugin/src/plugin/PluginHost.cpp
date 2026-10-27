@@ -13,7 +13,7 @@
 namespace
 {
 
-constexpr int kApiVersion = 1;
+constexpr int kApiVersion = 2;
 constexpr int kMethodNotFound = -32601;
 constexpr int kInvalidParams = -32602;
 constexpr int kCommandFailed = -32000;

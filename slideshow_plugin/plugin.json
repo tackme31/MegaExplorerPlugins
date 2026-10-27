@@ -4,13 +4,13 @@
   "name": "Slideshow",
   "version": "0.1.0",
   "description": "Plays the images in a folder as a full-window slideshow, with sorting, filtering and transitions.",
-  "apiVersion": 1,
+  "apiVersion": 2,
   "run": { "command": "bin/win-unpacked/Slideshow.exe" },
   "permissions": ["items.read", "content.stream"],
   "commands": [
-    { "id": "this-folder", "title": "This folder only", "progress": "never", "when": { "targets": "folders" } },
-    { "id": "subfolders", "title": "Including subfolders", "progress": "never", "when": { "targets": "folders" } },
-    { "id": "phone-this-folder", "title": "On a phone: this folder only", "progress": "never", "when": { "targets": "folders" } },
-    { "id": "phone-subfolders", "title": "On a phone: including subfolders", "progress": "never", "when": { "targets": "folders" } }
+    { "id": "this-folder", "title": "This folder only", "progressDialog": false, "when": { "targets": "folders" } },
+    { "id": "subfolders", "title": "Including subfolders", "progressDialog": false, "when": { "targets": "folders" } },
+    { "id": "phone-this-folder", "title": "On a phone: this folder only", "progressDialog": false, "when": { "targets": "folders" } },
+    { "id": "phone-subfolders", "title": "On a phone: including subfolders", "progressDialog": false, "when": { "targets": "folders" } }
   ]
 }

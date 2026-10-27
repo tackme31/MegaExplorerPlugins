@@ -4,10 +4,10 @@
   "name": "Duplicate Finder",
   "version": "0.1.0",
   "description": "Lists the files under a folder that have the same content, grouped, using the checksum MEGA keeps with each file.",
-  "apiVersion": 1,
+  "apiVersion": 2,
   "run": { "command": "uv", "args": ["run", "--quiet", "main.py"] },
   "permissions": ["items.read"],
   "commands": [
-    { "id": "find", "title": "Find duplicates...", "progress": "never", "when": { "targets": "folders" } }
+    { "id": "find", "title": "Find duplicates...", "progressDialog": false, "when": { "targets": "folders" } }
   ]
 }

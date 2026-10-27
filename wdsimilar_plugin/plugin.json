@@ -4,11 +4,11 @@
   "name": "WD Similar",
   "version": "0.2.0",
   "description": "Lists the images and videos whose WD Tagger tags are most like a chosen file's, in a window that stays open.",
-  "apiVersion": 1,
+  "apiVersion": 2,
   "run": { "command": "uv", "args": ["run", "--quiet", "main.py"] },
   "permissions": ["items.read", "content.read"],
   "commands": [
-    { "id": "find", "title": "Find similar images", "progress": "never",
+    { "id": "find", "title": "Find similar images", "progressDialog": false,
       "when": { "targets": "files",
                 "extensions": ["png", "jpg", "jpeg", "webp", "bmp", "gif",
                                "mp4", "avi", "mkv", "webm", "mov", "wmv", "flv", "m4v"] } }

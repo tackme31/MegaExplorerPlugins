@@ -132,7 +132,7 @@ uv run python -m unittest
 - Words are weighted by IDF and by where they sit in their tag (WD Tagger writes best first): 1.0
   for the first word falling to 0.5 for the last, on both sides of the cosine. An unweighted
   version was tried first and lost clearly on real use.
-- The window stays open (`"progress": "never"`), so the drive is listed once, from memory, and the
+- The window stays open (`"progressDialog": false`), so the drive is listed once, from memory, and the
   index is not persisted. Further searches take the app's selection through `ui.selection`;
   **Rebuild index** re-lists. Thumbnails come through `items.fetchThumbnail` one at a time, only
   for rows shown. Needs a MEGA Explorer with both methods.

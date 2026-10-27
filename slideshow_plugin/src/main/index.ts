@@ -181,7 +181,7 @@ rpc.on('initialize', (params) => {
   const dir = (params as { plugin?: { dir?: string } }).plugin?.dir
   if (dir) pluginDir = dir
   settings = loadSettings()
-  return { apiVersion: 1 }
+  return { apiVersion: 2 }
 })
 
 function escapeHtml(text: string): string {
@@ -242,7 +242,7 @@ rpc.on('shutdown', () => {
   return {}
 })
 
-// No Cancel reaches a "progress": "never" command, but answer the notification quietly.
+// No Cancel reaches a "progressDialog": false command, but answer the notification quietly.
 rpc.on('$/cancel', () => {})
 
 Menu.setApplicationMenu(null)

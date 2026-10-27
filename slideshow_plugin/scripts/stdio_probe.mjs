@@ -15,5 +15,5 @@ createInterface({ input: p.stdout }).on('line', (line) => {
   else if (m.id === 3) p.stdin.end()
 })
 p.on('exit', (c) => console.log('exit', c))
-send({ id: 1, method: 'initialize', params: { apiVersion: 1, app: {}, plugin: {} } })
+send({ id: 1, method: 'initialize', params: { apiVersion: 2, app: {}, plugin: {} } })
 setTimeout(() => { console.log('TIMEOUT'); p.kill() }, 20000)
