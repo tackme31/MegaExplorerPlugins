@@ -3,10 +3,11 @@
 WD Tagger packs several words into one MEGA tag ("wd:1girl solo ...",
 "chara:a chara:b"), so suggestions are per word, while the match count runs the
 app's own rule on the stored tags: every term must be a case-insensitive
-substring of some tag on the file.
+substring of some tag on the file. The same rule picks the files a search shows.
 """
 
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 
 MAX_SUGGESTIONS = 50
 GENERAL_PREFIX = "wd:"
@@ -15,6 +16,14 @@ RATING_PREFIX = "rating:"
 RATINGS = ("general", "sensitive", "questionable", "explicit")
 # What the app's query parser splits words at; a term holding one needs quotes.
 QUERY_SPACES = (" ", "\t", "　")
+
+
+@dataclass(frozen=True)
+class File:
+    handle: str
+    name: str
+    mtime: int
+    has_thumbnail: bool
 
 
 def words_of(tag):
@@ -32,6 +41,7 @@ def words_of(tag):
 class TagIndex:
     def __init__(self):
         self.tags = []      # per file: its stored tags, lower-cased
+        self.entries = []   # per file: the File given to add(), or None
         self.files_by_word = defaultdict(set)
         self.kind = {}
         self._spellings = defaultdict(Counter)
@@ -40,10 +50,11 @@ class TagIndex:
     def files(self):
         return len(self.tags)
 
-    def add(self, tags):
+    def add(self, tags, file=None):
         file_id = len(self.tags)
         lowered = tuple(t.lower() for t in tags or [])
         self.tags.append(lowered)
+        self.entries.append(file)
         for tag in tags or []:
             for word, kind in words_of(tag):
                 if '"' in word:  # the query syntax has no way to write a quote
@@ -80,13 +91,20 @@ class TagIndex:
                                  -self.count(k), k))
         return keys[:MAX_SUGGESTIONS]
 
-    def matches(self, terms):
+    def _matching(self, terms):
         terms = [t.lower() for t in terms]
-        hits = 0
-        for tags in self.tags:
+        for file_id, tags in enumerate(self.tags):
             if all(any(term in tag for tag in tags) for term in terms):
-                hits += 1
-        return hits
+                yield file_id
+
+    def matches(self, terms):
+        return sum(1 for _ in self._matching(terms))
+
+    def search(self, terms):
+        """The Files matching terms, newest first; files added without one are left out."""
+        found = [self.entries[i] for i in self._matching(terms) if self.entries[i] is not None]
+        found.sort(key=lambda f: f.mtime or 0, reverse=True)
+        return found
 
 
 def query_text(terms):

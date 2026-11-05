@@ -2,7 +2,7 @@
 
 import unittest
 
-from tagquery import MAX_SUGGESTIONS, TagIndex, query_text, words_of
+from tagquery import MAX_SUGGESTIONS, File, TagIndex, query_text, words_of
 
 
 def index_of(*files):
@@ -85,6 +85,30 @@ class MatchesTest(unittest.TestCase):
 
     def test_matches_everything_without_terms(self):
         self.assertEqual(index_of(["a"], []).matches([]), 2)
+
+
+class SearchTest(unittest.TestCase):
+    def test_returns_the_matching_files_newest_first(self):
+        index = TagIndex()
+        old = File("h1", "old.png", 100, True)
+        new = File("h2", "new.png", 300, False)
+        index.add(["wd:1girl solo"], old)
+        index.add(["wd:1boy"], File("h3", "other.png", 200, True))
+        index.add(["wd:solo_focus"], new)
+        self.assertEqual(index.search(["solo"]), [new, old])
+
+    def test_sorts_a_missing_mtime_last(self):
+        index = TagIndex()
+        dated = File("h1", "a.png", 5, True)
+        undated = File("h2", "b.png", None, True)
+        index.add(["x"], undated)
+        index.add(["x"], dated)
+        self.assertEqual(index.search(["x"]), [dated, undated])
+
+    def test_leaves_out_files_added_without_an_entry(self):
+        index = index_of(["x"])
+        self.assertEqual(index.search(["x"]), [])
+        self.assertEqual(index.matches(["x"]), 1)
 
 
 class QueryTextTest(unittest.TestCase):
