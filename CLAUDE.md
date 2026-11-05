@@ -119,6 +119,9 @@ uv run python -m unittest
   suggestions, match count, search results, query text), `main.py` the window, the counting
   thread and the thumbnail threads. The grid was copied from `wdsimilar_plugin` and adapted;
   the two are not kept in sync.
+- `settings.json` (gitignored) can narrow the listing to some folders, through `scope.py`. It
+  started as a copy of `wdsimilar_plugin`'s; the two are not kept in sync. §11 of `docs/SPEC.md`
+  says why a missing folder never falls back to the whole drive.
 - Search runs in memory over the index listed at start, not through the app's search (which was
   slow); **Search in MEGA Explorer** still hands the query to `ui.search`.
 - The match count must follow MEGA Explorer's search rule exactly; `docs/SPEC.md` (Japanese) says
@@ -140,6 +143,7 @@ uv run python -m unittest
   index is not persisted. Further searches take the app's selection through `ui.selection`;
   **Rebuild index** re-lists. Thumbnails come through `items.fetchThumbnail` one at a time, only
   for rows shown. Needs a MEGA Explorer with both methods.
+- `settings.json` (gitignored) can narrow the listing to some folders, through `scope.py`.
 
 ## dupfinder_plugin (Python / uv)
 

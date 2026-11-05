@@ -1,7 +1,7 @@
 """WD Tag Search: search the files by WD Tagger's tags and show the matches as a
-grid of thumbnails. The tags of the whole drive are listed once, at start, and a
-search runs over that list in memory, with suggestions drawn from the tags already
-on the files and a live count. The query can also be run in the app's current tab.
+grid of thumbnails. The tags of the whole drive, or of the folders settings.json
+names (scope.py), are listed once, at start, and a search runs over that list in
+memory, with suggestions drawn from the tags already on the files and a live count. The query can also be run in the app's current tab.
 The index and the query rules are in tagquery.py.
 """
 
@@ -14,6 +14,7 @@ from tkinter import ttk
 
 from PIL import Image, ImageOps, ImageTk
 
+import scope
 from megaexplorer_plugin import NoThumbnail, Plugin, RpcError
 from tagquery import RATING_PREFIX, RATINGS, File, TagIndex, query_text
 
@@ -220,15 +221,25 @@ class Window:
 
     def load(self):
         try:
+            paths = scope.load_folders()
+            folders, missing = scope.folders_to_list(self.ctx, self.drive_root, paths)
+            if not folders:
+                self.updates.put(("error", f"none of the folders in settings.json was found: "
+                                           f"{', '.join(missing)}"))
+                return
             index = TagIndex()
-            files = self.ctx.descendants(self.drive_root, type="file", fields=FIELDS)
-            for n, item in enumerate(files, 1):
-                if self.closing.is_set():
-                    return
-                index.add(item.tags, File(item.handle, item.name, item.mtime, bool(item.has_thumbnail)))
-                if n % 1000 == 0:
-                    self.updates.put(("progress", n))
-            self.updates.put(("done", index))
+            n = 0
+            for folder in folders:
+                for item in self.ctx.descendants(folder, type="file", fields=FIELDS):
+                    if self.closing.is_set():
+                        return
+                    index.add(item.tags, File(item.handle, item.name, item.mtime, bool(item.has_thumbnail)))
+                    n += 1
+                    if n % 1000 == 0:
+                        self.updates.put(("progress", n))
+            self.updates.put(("done", (index, scope.describe(paths, missing))))
+        except scope.SettingsError as e:
+            self.updates.put(("error", str(e)))
         except RpcError as e:
             self.updates.put(("error", e.message))
 
@@ -239,10 +250,10 @@ class Window:
                 if kind == "progress":
                     self.status.config(text=f"Counting tags... {value:,} files")
                 elif kind == "done":
-                    self.index = value
+                    self.index, note = value
                     self.loaded = True
-                    self.status.config(
-                        text=f"{value.files:,} files, {len(value.files_by_word):,} distinct tags (counted at start)")
+                    self.status.config(text=f"{self.index.files:,} files, {len(self.index.files_by_word):,} "
+                                            f"distinct tags (counted at start).{note}")
                     self.label_ratings()
                     self.refresh()
                 elif kind == "thumb":

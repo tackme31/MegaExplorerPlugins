@@ -1,7 +1,8 @@
 """WD Similar: shows the files whose WD Tagger tags are most like a chosen file's,
-as a grid of thumbnails, in a window that stays open: the tags of the whole drive
-are listed once, and any file selected in the app can then be searched from the
-window. Read-only. The ranking is in similar.py.
+as a grid of thumbnails, in a window that stays open: the tags of the whole drive,
+or of the folders settings.json names (scope.py), are listed once, and any file
+selected in the app can then be searched from the window. Read-only. The ranking
+is in similar.py.
 """
 
 import ctypes
@@ -13,6 +14,7 @@ from tkinter import ttk
 
 from PIL import Image, ImageOps, ImageTk
 
+import scope
 from megaexplorer_plugin import CommandError, NoThumbnail, Plugin, RpcError
 from similar import SimilarityIndex, fingerprint, terms_of
 
@@ -82,6 +84,7 @@ class Window:
         self.ranking = None      # every match of the current query
         self.visible = None      # the ranking as shown: copies left out or not
         self.timing = ""
+        self.scope_note = ""     # scope.describe() of the folders the index was listed from
         self.generation = 0      # bumped whenever the tiles are replaced
         self.tiles = []          # the Matches shown, in rank order
         self.images = {}         # tile number or "query" -> PhotoImage, kept referenced
@@ -250,17 +253,27 @@ class Window:
     def list_and_rank(self, query):
         try:
             started = time.perf_counter()
+            paths = scope.load_folders()
+            folders, missing = scope.folders_to_list(self.ctx, self.root_item, paths)
+            if not folders:
+                self.updates.put(("error", f"None of the folders in settings.json was found: "
+                                           f"{', '.join(missing)}"))
+                return
+            self.updates.put(("scope", scope.describe(paths, missing)))
             index = SimilarityIndex()
             listed = 0
-            for item in self.ctx.descendants(self.root_item, type="file", fields=FIELDS):
-                if self.closing.is_set():
-                    return
-                index.add(item.handle, item.name, item.path, item.tags, item.size, item.crc,
-                          item.has_thumbnail)
-                listed += 1
-                if listed % 1000 == 0:
-                    self.updates.put(("status", f"Listing the files... {listed:,}"))
+            for folder in folders:
+                for item in self.ctx.descendants(folder, type="file", fields=FIELDS):
+                    if self.closing.is_set():
+                        return
+                    index.add(item.handle, item.name, item.path, item.tags, item.size, item.crc,
+                              item.has_thumbnail)
+                    listed += 1
+                    if listed % 1000 == 0:
+                        self.updates.put(("status", f"Listing the files... {listed:,}"))
             self.rank(index, query, time.perf_counter() - started)
+        except scope.SettingsError as e:
+            self.updates.put(("error", str(e)))
         except RpcError as e:
             self.updates.put(("error", f"Could not list the files: {e.message}"))
 
@@ -276,6 +289,8 @@ class Window:
                 kind, value = self.updates.get_nowait()
                 if kind == "status":
                     self.status.config(text=value)
+                elif kind == "scope":
+                    self.scope_note = value
                 elif kind == "ranked":
                     self.on_ranked(*value)
                 elif kind == "thumb":
@@ -298,7 +313,7 @@ class Window:
         self.ranking = ranking
         timing = f"Listed in {list_seconds:.1f} s, ranked in {rank_seconds:.1f} s." if list_seconds \
             else f"Ranked in {rank_seconds:.1f} s."
-        self.timing = f"{len(index):,} tagged files. {timing}"
+        self.timing = f"{len(index):,} tagged files. {timing}{self.scope_note}"
         self.show_ranking()
 
     # --- results --------------------------------------------------------------------

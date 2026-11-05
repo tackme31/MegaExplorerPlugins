@@ -23,8 +23,26 @@ show it in its folder. **Search in MEGA Explorer** runs the query in the app's c
 
 - **Tag your files with WD Tagger first.** Other tags are only offered whole, and the rating
   finds nothing without WD Tagger's `rating:` tags.
-- The search covers the whole Cloud Drive, files only, with the tags as they were when the window
-  opened. **Search in MEGA Explorer** searches the open folder and below, so it can find fewer.
+- The search covers the whole Cloud Drive (or the folders set in [Settings](#settings)), files
+  only, with the tags as they were when the window opened. **Search in MEGA Explorer** searches the open folder and below, so it can find fewer.
+
+## Settings
+
+By default the whole Cloud Drive is listed. To list only some folders, which on a large drive
+saves the time and the app memory a full listing takes, put a `settings.json` next to
+`plugin.json`:
+
+```json
+{"folders": ["/Photos", "/Illustrations/2024"]}
+```
+
+- Paths start at the Cloud Drive root and match folder names exactly, case included. A folder
+  inside another listed one adds nothing.
+- A path that is not found is skipped and named on the status line; if none is found, nothing is
+  listed. A missing folder never widens the listing to the whole drive.
+- Without the file, or with an empty list, the whole drive is listed.
+- The file is read when the window opens. It is not in the release zip, so a new version unpacked over the
+  folder keeps it.
 
 ## Requirements
 
