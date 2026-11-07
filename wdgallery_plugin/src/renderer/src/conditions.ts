@@ -32,7 +32,7 @@ export function parseCondition(text: string): Condition | null {
 export function labelOf(c: Condition): { key: string; value: string } {
   switch (c.kind) {
     case 'tag':
-      return { key: 'tag', value: c.word }
+      return { key: c.negated ? 'not' : 'tag', value: c.word }
     case 'character':
       return { key: 'chara', value: c.word }
     case 'name':
@@ -46,9 +46,22 @@ export function labelOf(c: Condition): { key: string; value: string } {
   }
 }
 
-// Same condition twice adds nothing; a new similar-to replaces the old one.
+// Same condition twice adds nothing; a new similar-to replaces the old one, and a tag replaces
+// its own opposite, since both together could match nothing.
 export function withCondition(list: Condition[], c: Condition): Condition[] {
   if (c.kind === 'similar') return [...list.filter((x) => x.kind !== 'similar'), c]
+  if (c.kind === 'tag') list = list.filter((x) => !(x.kind === 'tag' && x.word === c.word && !x.negated !== !c.negated))
   const key = JSON.stringify({ ...c, id: 0 })
   return list.some((x) => JSON.stringify({ ...x, id: 0 }) === key) ? list : [...list, c]
+}
+
+// Flips a tag in place; another chip of the same word, now a duplicate, goes.
+export function toggleNegated(list: Condition[], id: number): Condition[] {
+  const c = list.find((x) => x.id === id)
+  if (c?.kind !== 'tag') return list
+  const { negated: _negated, ...rest } = c
+  const flipped: Condition = c.negated ? rest : { ...rest, negated: true }
+  return list
+    .filter((x) => x === c || !(x.kind === 'tag' && x.word === c.word))
+    .map((x) => (x === c ? flipped : x))
 }

@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, ArrowDownUp, Loader2, RefreshCw } from 'lucide-react'
 import type { Condition, Hit, IndexStatus, Rating, SearchResult, Sort } from '../../shared/types'
-import { withCondition, newId } from './conditions'
+import { toggleNegated, withCondition, newId } from './conditions'
 import { formatDate } from './format'
 import { Grid } from './Grid'
 import { Pager } from './Pager'
@@ -168,6 +168,7 @@ export function App() {
           conditions={conditions}
           onAdd={add}
           onRemove={(id) => setConditions((list) => list.filter((c) => c.id !== id))}
+          onToggle={(id) => setConditions((list) => toggleNegated(list, id))}
           onClear={() => setConditions([])}
         />
       </div>

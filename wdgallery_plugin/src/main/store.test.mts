@@ -97,6 +97,16 @@ describe('search', () => {
     assert.deepEqual(handles(search([{ kind: 'tag', word: 'kagamine_rin' }])), [])
   })
 
+  test('a negated tag leaves out the files carrying it', () => {
+    const not = (word: string) => ({ kind: 'tag', word, negated: true }) as const
+    assert.deepEqual(handles(search([not('smile')])), ['H3', 'H5', 'H6', 'H7'])
+    assert.deepEqual(handles(search([{ kind: 'tag', word: 'long_hair' }, not('1girl')])), ['H4'])
+    assert.deepEqual(handles(search([not('long trip'), not('1girl')])), ['H4', 'H6', 'H7'])
+    assert.equal(search([not('no_such_tag')]).total, 7)
+    assert.deepEqual(handles(search([{ kind: 'similar', handle: 'H1', name: '' }, not('umbrella')])), ['H3'])
+    assert.deepEqual(search([{ kind: 'tag', word: 'smile' }, not('smile')]).total, 0)
+  })
+
   test('name, size and date filters, alone and with tags', () => {
     assert.deepEqual(handles(search([{ kind: 'name', text: '100%' }])), ['H7'])
     assert.equal(handles(search([{ kind: 'name', text: 'FILE' }])).length, 5)

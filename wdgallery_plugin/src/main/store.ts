@@ -283,7 +283,11 @@ export class Searcher {
     const wordSets: { ids: number[]; files: number }[] = []
     let similar: { handle: string } | null = null
     for (const c of conditions) {
-      if (c.kind === 'tag') wordSets.push(this.wordIds([GENERAL, USER], c.word))
+      if (c.kind === 'tag' && c.negated) {
+        const { ids } = this.wordIds([GENERAL, USER], c.word)
+        if (ids.length)
+          filters.push(`NOT EXISTS (SELECT 1 FROM postings x WHERE x.word_id IN (${ids.join(',')}) AND x.item_id = i.id)`)
+      } else if (c.kind === 'tag') wordSets.push(this.wordIds([GENERAL, USER], c.word))
       else if (c.kind === 'character') wordSets.push(this.wordIds([CHARACTER], c.word))
       else if (c.kind === 'name') {
         filters.push("i.name LIKE ? ESCAPE '\\'")

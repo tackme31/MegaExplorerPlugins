@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Search, Sparkles, X } from 'lucide-react'
+import { CircleMinus, CirclePlus, Search, Sparkles, X } from 'lucide-react'
 import type { Condition } from '../../shared/types'
 import { labelOf, newId, parseCondition } from './conditions'
 import { thumbnailUrl } from './format'
@@ -36,7 +36,7 @@ function useSuggestions(text: string): Suggestion[] {
   return list
 }
 
-function Chip(props: { condition: Condition; onRemove: () => void }) {
+function Chip(props: { condition: Condition; onRemove: () => void; onToggle: () => void }) {
   const { key, value } = labelOf(props.condition)
   const c = props.condition
   const tone =
@@ -44,7 +44,9 @@ function Chip(props: { condition: Condition; onRemove: () => void }) {
       ? 'bg-violet-500/20 pl-1 text-violet-100 ring-1 ring-violet-400/40'
       : c.kind === 'character'
         ? 'bg-fuchsia-500/15 pl-2.5 text-fuchsia-100'
-        : 'bg-white/10 pl-2.5 text-neutral-100'
+        : c.kind === 'tag' && c.negated
+          ? 'bg-rose-500/15 pl-2.5 text-rose-100 ring-1 ring-rose-400/40'
+          : 'bg-white/10 pl-2.5 text-neutral-100'
   return (
     <span className={`flex h-7 max-w-72 shrink-0 items-center gap-1.5 rounded-md pr-1 text-[13px] ${tone}`}>
       {c.kind === 'similar' && (
@@ -54,7 +56,16 @@ function Chip(props: { condition: Condition; onRemove: () => void }) {
         </>
       )}
       <span className="shrink-0 text-neutral-400">{key}:</span>
-      <span className="truncate">{value}</span>
+      <span className={`truncate ${c.kind === 'tag' && c.negated ? 'line-through decoration-rose-300/70' : ''}`}>{value}</span>
+      {c.kind === 'tag' && (
+        <button
+          onClick={props.onToggle}
+          title={c.negated ? 'Include this tag' : 'Exclude this tag'}
+          className="grid h-5 w-5 shrink-0 place-items-center rounded text-neutral-400 hover:bg-white/15 hover:text-white"
+        >
+          {c.negated ? <CirclePlus size={13} /> : <CircleMinus size={13} />}
+        </button>
+      )}
       <button
         onClick={props.onRemove}
         title="Remove"
@@ -70,6 +81,7 @@ export function SearchBar(props: {
   conditions: Condition[]
   onAdd: (c: Condition) => void
   onRemove: (id: number) => void
+  onToggle: (id: number) => void
   onClear: () => void
 }) {
   const [text, setText] = useState('')
@@ -99,7 +111,7 @@ export function SearchBar(props: {
       >
         <Search size={17} className="mr-1 shrink-0 text-neutral-400" />
         {props.conditions.map((c) => (
-          <Chip key={c.id} condition={c} onRemove={() => props.onRemove(c.id)} />
+          <Chip key={c.id} condition={c} onRemove={() => props.onRemove(c.id)} onToggle={() => props.onToggle(c.id)} />
         ))}
         <input
           ref={input}
