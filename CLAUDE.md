@@ -24,6 +24,8 @@ and its own README (features, installation, building) and LICENSE. `README.md` h
 | `wdsimilar_plugin/` | WD Similar: lists the files whose WD Tagger tags are most like a chosen file's, with thumbnails, in a window that stays open and searches the app's selection. Read-only. | Python / uv |
 | `dupfinder_plugin/` | Duplicate Finder: groups the files under a folder by size and MEGA's content checksum (`crc`) and lists the duplicates. Read-only. | Python / uv |
 | `zip_search/` | ZIP Search: lists the files inside every ZIP under a folder, filterable, and saves one file out of its ZIP. | Python / uv |
+| `wdgallery_plugin/` | WD Gallery: searches the drive's images and videos by WD Tagger's tags (whole words), name, size, date and similarity, from an SQLite index kept per drive; thumbnail grid, preview popup, video playback. Read-only. | TypeScript / Electron + React |
+| `indexbench_plugin/` | Index Bench: times listing a folder, splitting its tags into words and storing them in SQLite; groundwork for an Electron search UI. Read-only. | Python / uv |
 | `slideshow_plugin/` | Slideshow: plays a folder's images in its own window, sorted and filtered, streamed through `items.streamUrl`. Read-only. | TypeScript / Electron + React |
 
 Branch `main` only, pushed to `origin` (GitHub); pushing it is fine. Releases are zips of one
@@ -198,6 +200,28 @@ npm run package    # the same + ../dist/Slideshow-<version>.zip
   empty line on stdout at startup, which the app logs as a non-JSON line; harmless.
 - `scripts/stdio_probe.mjs` drives the exe over piped stdio like the app does.
 - No `docs/SPEC.md` by decision: the reasons live in code comments.
+
+## wdgallery_plugin (TypeScript / Electron + React)
+
+```
+npm ci
+npm run typecheck
+npm test           # node:test on Electron's own Node, which has node:sqlite and runs .ts
+npm run pack       # bin/win-unpacked/WDGallery.exe, which plugin.json starts
+```
+
+- The index is `%LOCALAPPDATA%\MegaExplorer-WDGallery\<root handle>.sqlite`, built on first
+  open and replaced only by Rebuild (through a `.tmp` file, renamed over). `store.ts` holds it:
+  `postings` is the inverted index (word, item, level), `words` the IDF, `items.norm` the cosine
+  norm; the similarity score must equal WD Similar's, and a test pins it to `similar.py`'s
+  numbers. Bump `SCHEMA_VERSION` when the schema changes: an old file is then rebuilt.
+- SQLite runs in a worker thread (`worker.ts`): building and similarity take seconds.
+- Joins that matter use `CROSS JOIN` to fix the order. Left to the planner, a facet-style
+  query once picked a plan of ~10^9 lookups.
+- Thumbnails and previews are served to the window through the `thumb:` / `preview:` schemes,
+  at most three fetches in flight, skipped when the image left the screen while queued.
+- Main-process modules imported by the tests use explicit `.ts` extensions and only erasable
+  TypeScript (no enums, no parameter properties), as Node's type stripping requires.
 
 ## Writing docs and commits
 

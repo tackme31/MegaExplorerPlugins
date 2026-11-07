@@ -1,0 +1,9 @@
+[project]
+name = "indexbench-plugin"
+version = "0.1.0"
+description = "MegaExplorer plugin: time building an SQLite tag index of a folder"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false

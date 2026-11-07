@@ -1,0 +1,15 @@
+{
+  "manifestVersion": 1,
+  "id": "com.takumi.indexbench",
+  "name": "Index Bench",
+  "version": "0.1.0",
+  "description": "Measures how long it takes to read every file under a folder and store its tags, split into words, in an SQLite database.",
+  "apiVersion": 2,
+  "run": { "command": "uv", "args": ["run", "--quiet", "main.py"] },
+  "permissions": ["items.read"],
+  "commands": [
+    { "id": "build", "title": "Build index", "when": { "targets": "folders" } },
+    { "id": "build-paths", "title": "Build index with paths", "when": { "targets": "folders" } },
+    { "id": "query", "title": "Query bench" }
+  ]
+}

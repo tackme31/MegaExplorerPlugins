@@ -1,0 +1,13 @@
+{
+  "manifestVersion": 1,
+  "id": "com.takumi.wdgallery",
+  "name": "WD Gallery",
+  "version": "0.1.0",
+  "description": "Searches the drive's images and videos by WD Tagger's tags, name, size, date and similarity, in a window of thumbnails.",
+  "apiVersion": 2,
+  "run": { "command": "bin/win-unpacked/WDGallery.exe" },
+  "permissions": ["items.read", "content.read", "content.stream"],
+  "commands": [
+    { "id": "open", "title": "Open gallery...", "progressDialog": false }
+  ]
+}
