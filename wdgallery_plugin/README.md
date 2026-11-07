@@ -13,9 +13,10 @@ gallery...**. The window covers the whole drive the clicked item is in.
   its ×, or Backspace in the empty box.
   - `long_hair` (or `long hair`): files carrying that tag, matched as a whole word, not a part of
     one. WD Tagger's words and your own tags both count. Suggestions with file counts appear as
-    you type; ↑/↓ and Enter or Tab pick one. The ⊖ on a tag's chip turns it around: files
-    *without* that tag (⊕ turns it back).
+    you type; ↑/↓ and Enter or Tab pick one.
   - `chara:hatsune_miku`: files with that character, with suggestions.
+  - The ⊖ on a tag's or a character's chip turns it around: files *without* it (⊕ turns it
+    back).
   - `name:text`: the file name contains `text` (ignoring case).
   - `size:>1MB`, `size:<500KB` (B, KB, MB, GB).
   - `modified:>2025-01-01` (that day or later), `modified:<2025-01-01` (before it).

@@ -107,6 +107,15 @@ describe('search', () => {
     assert.deepEqual(search([{ kind: 'tag', word: 'smile' }, not('smile')]).total, 0)
   })
 
+  test('a negated character too, also within a similarity search', () => {
+    const notChara = (word: string) => ({ kind: 'character', word, negated: true }) as const
+    assert.deepEqual(handles(search([notChara('hatsune_miku')])), ['H3', 'H4', 'H5', 'H6', 'H7'])
+    assert.equal(search([{ kind: 'tag', word: 'hatsune_miku', negated: true }]).total, 7)
+    const like1 = { kind: 'similar', handle: 'H1', name: '' } as const
+    assert.deepEqual(handles(search([like1])), ['H3', 'H4'])
+    assert.deepEqual(handles(search([like1, notChara('kagamine_rin')])), ['H3'])
+  })
+
   test('name, size and date filters, alone and with tags', () => {
     assert.deepEqual(handles(search([{ kind: 'name', text: '100%' }])), ['H7'])
     assert.equal(handles(search([{ kind: 'name', text: 'FILE' }])).length, 5)

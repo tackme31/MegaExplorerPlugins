@@ -13,7 +13,7 @@ export function extensionOf(name: string): string {
 
 export type Condition =
   | { id: number; kind: 'tag'; word: string; negated?: true }
-  | { id: number; kind: 'character'; word: string }
+  | { id: number; kind: 'character'; word: string; negated?: true }
   | { id: number; kind: 'name'; text: string }
   | { id: number; kind: 'size'; op: '>' | '<'; bytes: number }
   | { id: number; kind: 'modified'; op: '>' | '<'; date: string }

@@ -39,13 +39,15 @@ function useSuggestions(text: string): Suggestion[] {
 function Chip(props: { condition: Condition; onRemove: () => void; onToggle: () => void }) {
   const { key, value } = labelOf(props.condition)
   const c = props.condition
+  const negatable = c.kind === 'tag' || c.kind === 'character'
+  const negated = negatable && c.negated
   const tone =
     c.kind === 'similar'
       ? 'bg-violet-500/20 pl-1 text-violet-100 ring-1 ring-violet-400/40'
-      : c.kind === 'character'
-        ? 'bg-fuchsia-500/15 pl-2.5 text-fuchsia-100'
-        : c.kind === 'tag' && c.negated
-          ? 'bg-rose-500/15 pl-2.5 text-rose-100 ring-1 ring-rose-400/40'
+      : negated
+        ? 'bg-rose-500/15 pl-2.5 text-rose-100 ring-1 ring-rose-400/40'
+        : c.kind === 'character'
+          ? 'bg-fuchsia-500/15 pl-2.5 text-fuchsia-100'
           : 'bg-white/10 pl-2.5 text-neutral-100'
   return (
     <span className={`flex h-7 max-w-72 shrink-0 items-center gap-1.5 rounded-md pr-1 text-[13px] ${tone}`}>
@@ -56,14 +58,14 @@ function Chip(props: { condition: Condition; onRemove: () => void; onToggle: () 
         </>
       )}
       <span className="shrink-0 text-neutral-400">{key}:</span>
-      <span className={`truncate ${c.kind === 'tag' && c.negated ? 'line-through decoration-rose-300/70' : ''}`}>{value}</span>
-      {c.kind === 'tag' && (
+      <span className={`truncate ${negated ? 'line-through decoration-rose-300/70' : ''}`}>{value}</span>
+      {negatable && (
         <button
           onClick={props.onToggle}
-          title={c.negated ? 'Include this tag' : 'Exclude this tag'}
+          title={negated ? 'Include again' : 'Exclude'}
           className="grid h-5 w-5 shrink-0 place-items-center rounded text-neutral-400 hover:bg-white/15 hover:text-white"
         >
-          {c.negated ? <CirclePlus size={13} /> : <CircleMinus size={13} />}
+          {negated ? <CirclePlus size={13} /> : <CircleMinus size={13} />}
         </button>
       )}
       <button
