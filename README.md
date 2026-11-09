@@ -13,7 +13,6 @@ plugin's README for usage and installation.
 | [ZIP Search](zip_search/README.md) | Lists the files inside the ZIPs under a folder and saves one without downloading the archive. |
 | [Slideshow](slideshow_plugin/README.md) | Plays the images in a folder as a slideshow. |
 | [WD Gallery](wdgallery_plugin/README.md) | Searches the images and videos by WD Tagger's tags, name, size, date and similarity, as a thumbnail grid. |
-| [Index Bench](indexbench_plugin/README.md) | Measures how long building an SQLite tag index of a folder takes. |
 
 ## License
 

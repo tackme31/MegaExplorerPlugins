@@ -25,7 +25,6 @@ and its own README (features, installation, building) and LICENSE. `README.md` h
 | `dupfinder_plugin/` | Duplicate Finder: groups the files under a folder by size and MEGA's content checksum (`crc`) and lists the duplicates. Read-only. | Python / uv |
 | `zip_search/` | ZIP Search: lists the files inside every ZIP under a folder, filterable, and saves one file out of its ZIP. | Python / uv |
 | `wdgallery_plugin/` | WD Gallery: searches the drive's images and videos by WD Tagger's tags (whole words), name, size, date and similarity, from an SQLite index kept per drive; thumbnail grid, preview popup, video playback. Read-only. | TypeScript / Electron + React |
-| `indexbench_plugin/` | Index Bench: times listing a folder, splitting its tags into words and storing them in SQLite; groundwork for an Electron search UI. Read-only. | Python / uv |
 | `slideshow_plugin/` | Slideshow: plays a folder's images in its own window, sorted and filtered, streamed through `items.streamUrl`. Read-only. | TypeScript / Electron + React |
 
 Branch `main` only, pushed to `origin` (GitHub); pushing it is fine. Releases are zips of one
