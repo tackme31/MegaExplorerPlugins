@@ -1,5 +1,8 @@
 # WD Similar for MEGA Explorer
 
+> **Deprecated.** This plugin has been merged into [WD Gallery](../wdgallery_plugin/README.md),
+> which does its searches as well, and is no longer maintained.
+
 A MEGA Explorer plugin that lists the images and videos whose
 [WD Tagger](../wdtagger_plugin/README.md) tags are most like a chosen file's, with thumbnails. It
 compares the tags MEGA Explorer already holds in memory; only the thumbnails on screen are

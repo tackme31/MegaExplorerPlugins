@@ -1,5 +1,8 @@
 # WD Tag Search for MEGA Explorer
 
+> **Deprecated.** This plugin has been merged into [WD Gallery](../wdgallery_plugin/README.md),
+> which does its searches as well, and is no longer maintained.
+
 A MEGA Explorer plugin that searches your files by the tags
 [WD Tagger](../wdtagger_plugin/README.md) stores, with suggestions from the tags on your files and
 a live count of the files it matches, and shows the matches as a grid of thumbnails, newest first.

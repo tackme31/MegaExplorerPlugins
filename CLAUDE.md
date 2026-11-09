@@ -20,8 +20,8 @@ and its own README (features, installation, building) and LICENSE. `README.md` h
 | --- | --- | --- |
 | `dirstat_plugin/` | MegaDirStat: size tree + treemap of a folder, in its own window. Read-only. | C++20 / Qt 6 Widgets |
 | `wdtagger_plugin/` | WD Tagger: tags images/videos with a WD14 model on the GPU, as MEGA tags | Python / uv |
-| `wdtagsearch_plugin/` | WD Tag Search: searches the files by WD Tagger's tags, with suggestions and a match count, and shows the matches as a thumbnail grid; can also run the query in the app. Read-only. | Python / uv |
-| `wdsimilar_plugin/` | WD Similar: lists the files whose WD Tagger tags are most like a chosen file's, with thumbnails, in a window that stays open and searches the app's selection. Read-only. | Python / uv |
+| `wdtagsearch_plugin/` | **Deprecated** (merged into WD Gallery). WD Tag Search: searches the files by WD Tagger's tags, with suggestions and a match count, and shows the matches as a thumbnail grid; can also run the query in the app. Read-only. | Python / uv |
+| `wdsimilar_plugin/` | **Deprecated** (merged into WD Gallery). WD Similar: lists the files whose WD Tagger tags are most like a chosen file's, with thumbnails, in a window that stays open and searches the app's selection. Read-only. | Python / uv |
 | `dupfinder_plugin/` | Duplicate Finder: groups the files under a folder by size and MEGA's content checksum (`crc`) and lists the duplicates. Read-only. | Python / uv |
 | `zip_search/` | ZIP Search: lists the files inside every ZIP under a folder, filterable, and saves one file out of its ZIP. | Python / uv |
 | `wdgallery_plugin/` | WD Gallery: searches the drive's images and videos by WD Tagger's tags (whole words), name, size, date and similarity, from an SQLite index kept per drive; thumbnail grid, preview popup, video playback. Read-only. | TypeScript / Electron + React |
